@@ -162,7 +162,7 @@ a{color:var(--accent)}
 读完带走：5 个最有讲头的事故，每个讲透现象→根因→修复→法则映射。</p>
 </blockquote>
 <h2>先看全局：21 篇 postmortem 的分布</h2>
-<p>demands_agent 有 21 篇结构化 postmortem（PM-001~021）。<strong>这个数字本身就是一种成熟度证据</strong>——绝大多数个人项目拿不出 5 篇像样的复盘，更别说 21 篇全部按统一模板（现象/根因/修复/Agent 指令）结构化。</p>
+<p>demands_agent 有 21 篇结构化 postmortem（PM-001~021），全部按统一模板（现象/根因/修复/Agent 指令）归档。这种规模的事故沉淀，是这个项目区别于一次性 demo 的地方——每一个 gate、每一条契约背后，都有一次具体的事故。</p>
 <p><code>[真实产物 · 统计脱敏]</code> postmortem 按 Category × Severity 的分布：</p>
 <div class="mermaid">block-beta
   columns 3
@@ -173,7 +173,7 @@ a{color:var(--accent)}
   style Data fill:#fde68a,stroke:#d97706</div>
 
 <p>读这张图：<strong>Process 类占绝对多数（15/21），且 14 篇是 High severity。</strong> 这说明绝大多数事故不是技术 bug，而是&quot;流程纪律失守&quot;——AI 对 SOP 形式遵循、绕过门禁、未做事实核验。这个分布本身就是 <a href="03-可迁移法则.html">03-可迁移法则</a> 法则 10（门禁过 ≠ 交付对）的宏观证据。</p>
-<p>我从 21 篇里选了 5 篇最有讲头的——<strong>选择标准是：每篇都逼出了一条独立法则，且故事本身有普遍启示。</strong></p>
+<p>下面从 21 篇里选 5 篇展开。<strong>选择标准是：每篇都逼出了一条独立法则，且故事本身有普遍启示。</strong></p>
 <hr>
 <h2>复盘 1：PM-018 — Agent 对 SOP 仅作形式遵循，门禁全过但 release 不完整</h2>
 <p><strong>对应法则</strong>：<a href="03-可迁移法则.html">03-可迁移法则 › 法则 10</a> 门禁过 ≠ 交付对</p>
@@ -184,7 +184,7 @@ a{color:var(--accent)}
 <li><strong>内容不全</strong>：对象准入矩阵明明白白写着目标对象是 <code>Hive + SR mirror</code>（意味着 DDL 要双侧齐备），但 release 目录只产出了 SR DDL，<strong>没有 Hive DDL</strong>。</li>
 <li><strong>门禁可信度失真</strong>：S4 硬门禁 + finalize 都通过了，但通过结果没有阻止&quot;结构不规范 + DDL 范围不完整&quot;的 release 被误判为可交付。</li>
 </ol>
-<h3>根因（五层，一层比一层深）</h3>
+<h3>根因（五个并发的薄弱环节）</h3>
 <div class="mermaid">flowchart TD
     R1["1. Agent 对 SOP 是'参考型'遵循<br/>先让 gate 过，再局部修正"] --> R2
     R2["2. hooks 校'表面代理信号'<br/>文件存在 / SQL 数量 / 静态红线"] --> R3
@@ -195,8 +195,8 @@ a{color:var(--accent)}
     classDef root fill:#fee2e2,stroke:#dc2626
     class R1,R2,R3,R4,R5 root</div>
 
-<h3>最深的洞察</h3>
-<p>这次事故最大的教训不是&quot;漏了 Hive DDL&quot;，而是<strong>重新定义了门禁的角色认知</strong>：</p>
+<h3>关键认知转变</h3>
+<p>这次事故的核心教训不是&quot;漏了 Hive DDL&quot;，而是<strong>重新定义了门禁的角色认知</strong>：</p>
 <blockquote>
 <p>不允许再把 <code>hooks finalize passed</code> 解释成&quot;release 质量可靠&quot;。现阶段它只能表示&quot;形式性证据和若干静态红线通过&quot;。在补齐覆盖度门禁前，必须把 hooks 定义为&quot;<strong>必要但远远不充分</strong>&quot;的校验层。</p>
 </blockquote>
@@ -221,7 +221,7 @@ a{color:var(--accent)}
 <li>后者是生产 merge patch，必须先拉现网 SQL、核对字段顺序、声明产物类型。</li>
 </ul>
 <p>AI 把两者混在同一个 release 文件里，且没有先拉现网 SQL 核对。<strong>能力完全够，但它跳过了权限约束（&quot;patch 必须基于现网事实&quot;）。</strong></p>
-<h3>修复后的工程约束</h3>
+<h3>修复</h3>
 <p>PM-016 之后，所有名为 <code>patch</code> / <code>merge patch</code> / <code>task patch</code> 的 release SQL 必须遵守：</p>
 <div class="mermaid">flowchart LR
     A[拉现网任务 SQL] --> B[核对字段顺序]
@@ -237,8 +237,8 @@ a{color:var(--accent)}
 <h2>复盘 3：PM-007 — 错用 metadata lineage 导致 Nebula 血缘误判</h2>
 <p><strong>对应法则</strong>：<a href="03-可迁移法则.html">03-可迁移法则 › 法则 4</a> 先归类再修复；<a href="03-可迁移法则.html">03-可迁移法则 › 法则 6</a> 昂贵操作兑现预言</p>
 <h3>现象</h3>
-<p>我在分析里给出结论：&quot;对某张表调 metadata lineage 提示&#39;不在 lineage graph 中&#39;，目前 Nebula 侧无血缘图信息，只能黑盒使用。&quot;</p>
-<p>用户通过 Nebula 前端确认：<strong>该表在 Nebula 中确实有完整血缘</strong>（包括任务、上下游任务和 SQL）。实际上 <code>demands-agent lineage search/job/sql</code> 也能拿到完整信息，只是当时没走这条路径。</p>
+<p>分析阶段给出结论：&quot;对某张表调 metadata lineage 提示&#39;不在 lineage graph 中&#39;，目前 Nebula 侧无血缘图信息，只能黑盒使用。&quot;</p>
+<p>但用户通过 Nebula 前端确认：<strong>该表在 Nebula 中确实有完整血缘</strong>（包括任务、上下游任务和 SQL）。实际上 <code>demands-agent lineage search/job/sql</code> 也能拿到完整信息，只是当时没走这条路径——这是一个本可避免的误判。</p>
 <h3>根因：把局部视图当全局事实</h3>
 <div class="mermaid">flowchart TD
     A[用了 metadata lineage 接口<br/>本地元数据视图] --> B[这个视图里没记录]
@@ -249,7 +249,7 @@ a{color:var(--accent)}
     style C fill:#fee2e2,stroke:#dc2626</div>
 
 <p>最关键的一步是 <strong>C</strong>——把&quot;某个工具视图当前查不到&quot;直接外推成&quot;Nebula 侧无血缘图信息&quot;。这是典型的<strong>把局部视图当成全局事实</strong>。</p>
-<h3>修复后的 SOP</h3>
+<h3>修复</h3>
 <p>对所有&quot;not found / empty&quot;类结论，强制交叉验证：</p>
 <ul>
 <li>至少通过<strong>第二种手段</strong>（另一条命令或用户给出的前端信息）验证后再下定论。</li>
@@ -264,7 +264,7 @@ a{color:var(--accent)}
 <p>这是另一个项目（dwh-quality）的复盘，但被 demands_agent v0.7 直接吸收为前置依赖。dwh-quality 沉淀了大量资料：4 类资产文档视图（table/field、ETL task、lineage chain、owner），资产地图基础齐全。</p>
 <p><strong>结果</strong>：内容沉淀了，但没有形成可被 agent 在新需求中直接引用的知识点。agent 在做新需求时，仍然像没看过这些资料一样从头查 schema / lineage。业主自述：&quot;没有形成有效的知识点。&quot;</p>
 <h3>根因：单一根因，不是五个</h3>
-<p>PM-020 最精彩的部分是它<strong>排除了五个表象归因</strong>，收敛到单一根因：</p>
+<p>PM-020 的分析过程<strong>逐一排除了五个表象归因</strong>，收敛到单一根因：</p>
 <table>
 <thead>
 <tr>
@@ -347,8 +347,41 @@ a{color:var(--accent)}
 
 <p>这就是为什么 demands_agent 的整个设计——evidence 绑定、门禁、runtime 真相、PEG fail-closed——本质都是同一件事的不同切面：<strong>把&quot;形式合规&quot;和&quot;事实核验&quot;在工程上彻底分开，让前者无法冒充后者。</strong></p>
 <hr>
-<h2>21 篇 PM 的完整清单</h2>
-<p>为完整性，这里列出全部 21 篇（标题已脱敏，不含业务细节）：</p>
+<h2>21 篇 PM 概览</h2>
+<p>完整列表见仓库 <code>postmortem/</code> 目录，这里只给统计分布和代表性选摘：</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>篇数</th>
+<th>Severity 分布</th>
+<th>代表篇目</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Process</td>
+<td>15</td>
+<td>High×14 / Medium×1</td>
+<td>PM-018（SOP 形式遵循）、PM-016（样例误交付）</td>
+</tr>
+<tr>
+<td>Data</td>
+<td>3</td>
+<td>High×3</td>
+<td>PM-003（未核验直接猜测）、PM-008（回溯表语义误判）</td>
+</tr>
+<tr>
+<td>Config</td>
+<td>2</td>
+<td>Medium×2</td>
+<td>PM-001（技能路径不一致）、PM-021（环境漂移）</td>
+</tr>
+</tbody></table>
+<p>（PM-019 跳号是项目内的编号留白，不是遗漏。）</p>
+<p>Process 类占 15/21 且 14 篇 High——这个分布说明绝大多数事故不是技术 bug，而是流程纪律失守。这也是为什么这个项目的治理重心在门禁和契约，而不在代码逻辑本身。</p>
+<details>
+<summary>查看全部 21 篇完整清单</summary>
+
 <table>
 <thead>
 <tr>
@@ -479,8 +512,8 @@ a{color:var(--accent)}
 <td>Medium</td>
 </tr>
 </tbody></table>
-<p>（PM-019 跳号是项目内的编号留白，不是遗漏。）</p>
-<p><strong>这 21 篇 PM 是 demands_agent 最硬的成熟度证据。</strong> 它们证明这个项目不是在 happy path 上跑出来的 demo——每一个 gate、每一条契约、每一层边界，背后都有一次真实事故。</p>
+</details>
+
 <hr>
 
 <div class="nav"><a href="03-可迁移法则.html">← 上一篇：03-可迁移法则</a><a href="05-演进史.html">下一篇：05-演进史 →</a></div>
