@@ -195,6 +195,9 @@ function convertOne(mdPath) {
   const hdr = makeHeader(md, filename);
   const extracted = extractMermaid(md);
   let body = extracted.out.replace(/^#\s+.+\n?/m, '');
+  // 删除文末手写的"上一篇/下一篇"行（转换器会生成独立的 .nav 块，避免双重显示）
+  body = body.replace(/(?:^|\n)(?:上一篇[：:][^\n]*\n?|下一篇[：:][^\n]*\n?)+(?:\s*$)/, '');
+  body = body.replace(/(?:^|\n)下一篇[：:][^\n]*(?:\s*$)/, '');
   marked.setOptions({ gfm: true, breaks: false });
   let htmlBody = marked.parse(body);
   htmlBody = convertWikilinks(htmlBody);
