@@ -14,8 +14,8 @@ import { marked } from 'marked';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = dirname(__dirname); // 仓库根
-const SRC = join(ROOT, 'docs');   // md 源目录
-const OUT = join(ROOT, 'html');   // html 输出目录
+const SRC = join(ROOT, 'src');    // md 源目录
+const OUT = join(ROOT, 'docs');   // html 输出目录（GitHub Pages source）
 
 // === 1. 样式 ===
 const CSS = `

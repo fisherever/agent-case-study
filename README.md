@@ -13,7 +13,7 @@
 
 ```
 agent-case-study/
-├── docs/                  # markdown 源（Obsidian 友好，mermaid 原生渲染）
+├── src/                   # markdown 源（Obsidian 友好，mermaid 原生渲染）
 │   ├── README.md          # 案例集导航
 │   ├── 00-电梯演讲.md      # 30 秒 hook
 │   ├── 01-痛点与设计.md
@@ -23,7 +23,7 @@ agent-case-study/
 │   ├── 05-演进史.md        # v0.1 → v1.0-rc
 │   ├── 06-收获与边界.md
 │   └── 07-什么是Agent与研究笔记.md   # 研究型长文
-├── html/                  # 静态站点（GitHub Pages 部署根）
+├── docs/                  # 静态站点（GitHub Pages 部署根）
 └── scripts/
     ├── build_html.mjs     # markdown → html 转换器
     └── package.json
@@ -33,10 +33,10 @@ agent-case-study/
 
 ```bash
 # 方式 1：直接打开 html
-open html/README.html
+open docs/README.html
 
 # 方式 2：起本地服务（更接近线上）
-python3 -m http.server 8000 --directory html
+python3 -m http.server 8000 --directory docs
 # 访问 http://localhost:8000/README.html
 ```
 
