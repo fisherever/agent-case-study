@@ -70,6 +70,64 @@ tr:nth-child(even) td{background:#fcfbf7}
 .nav a:hover{text-decoration:underline}
 hr{border:none;border-top:1px solid var(--rule);margin:2rem 0}
 a{color:var(--accent)}
+
+/* === 作品集封面样式 === */
+/* 深色 Hero 区 */
+.hero{background:#1a1a1a;color:#f5f5f4;padding:3.5rem 2rem;margin:-2.5rem -1rem 2.5rem;
+  text-align:center;border-bottom:4px solid var(--accent)}
+.hero .eyebrow{font-size:.85rem;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--accent);font-weight:600;margin-bottom:.6rem}
+.hero h1{font-size:2.6rem;line-height:1.2;margin:.4rem auto .5rem;max-width:14em;
+  border:none;padding:0;color:#fff;display:block;letter-spacing:-.02em}
+.hero .sub{font-size:1.1rem;color:#a8a29e;margin-bottom:1.8rem}
+.hero .pull{font-size:1rem;color:#e7e5e4;max-width:32em;margin:0 auto 1.8rem;
+  font-style:italic;line-height:1.6}
+.hero .pull::before{content:open-quote;font-size:1.5rem;color:var(--accent);margin-right:.1em}
+.hero .pull::after{content:close-quote;font-size:1.5rem;color:var(--accent);margin-left:.1em}
+.hero .cta{display:inline-block;padding:.7rem 1.8rem;background:var(--accent);color:#fff;
+  text-decoration:none;border-radius:6px;font-weight:600;font-size:.95rem;
+  transition:transform .15s,background .15s}
+.hero .cta:hover{background:#92400e;transform:translateY(-1px)}
+/* 项目卡片 */
+.project-card{background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:1.6rem 1.8rem;margin:0 auto 2.5rem;max-width:680px;
+  display:grid;grid-template-columns:auto 1fr;gap:.8rem 1.5rem;align-items:start;font-size:.92rem}
+.project-card .label{color:var(--muted);font-weight:600;white-space:nowrap}
+.project-card .value{color:var(--ink)}
+/* 技术栈 tag */
+.tag{display:inline-block;background:var(--code-bg);color:#92400e;padding:.15rem .6rem;
+  border-radius:10px;font-size:.78rem;margin:.15rem .25rem .15rem 0;
+  font-family:"SF Mono",Consolas,monospace}
+/* 目录卡片网格 */
+.toc-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1rem;margin:1.5rem 0 2.5rem}
+.toc-card{display:block;background:var(--card);border:1px solid var(--border);
+  border-radius:8px;padding:1rem 1.2rem;text-decoration:none;color:var(--ink);
+  transition:border-color .15s,transform .15s;position:relative;padding-left:3.2rem}
+.toc-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.toc-card .num{position:absolute;left:1rem;top:1rem;background:var(--accent);color:#fff;
+  width:1.8rem;height:1.8rem;border-radius:6px;display:flex;align-items:center;
+  justify-content:center;font-weight:700;font-size:.85rem}
+.toc-card .title{font-weight:600;font-size:.98rem;margin-bottom:.2rem}
+.toc-card .desc{color:var(--muted);font-size:.82rem;line-height:1.4}
+.toc-card .time{color:var(--accent);font-size:.75rem;margin-top:.4rem;font-weight:600}
+/* 关于小节（折叠） */
+.about-section{margin-top:3rem;padding:1.5rem;background:#fcfbf7;border-radius:8px;
+  border:1px solid var(--rule);font-size:.9rem;color:var(--muted)}
+.about-section h2{font-size:1.1rem;color:var(--ink);margin:0 0 .8rem;border:none;padding:0;
+  display:block}
+.about-section details summary{cursor:pointer;color:var(--accent);font-weight:600}
+/* 继续阅读卡片 */
+.continue-reading{margin:2.5rem 0;padding:1.5rem;background:var(--card);
+  border:1px solid var(--border);border-radius:10px}
+.continue-reading .label{font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);font-weight:600;margin-bottom:.8rem}
+.continue-reading .next-link{display:block;font-size:1.05rem;font-weight:600;color:var(--accent)}
+.continue-reading .next-desc{font-size:.85rem;color:var(--muted);margin-top:.3rem}
+@media(max-width:640px){
+  .toc-grid{grid-template-columns:1fr}
+  .hero h1{font-size:1.9rem}
+  .project-card{grid-template-columns:1fr}
+}
 `;
 
 // === 2. mermaid 块提取（HTML 注释占位, marked 不动它） ===

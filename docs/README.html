@@ -90,6 +90,64 @@ tr:nth-child(even) td{background:#fcfbf7}
 .nav a:hover{text-decoration:underline}
 hr{border:none;border-top:1px solid var(--rule);margin:2rem 0}
 a{color:var(--accent)}
+
+/* === 作品集封面样式 === */
+/* 深色 Hero 区 */
+.hero{background:#1a1a1a;color:#f5f5f4;padding:3.5rem 2rem;margin:-2.5rem -1rem 2.5rem;
+  text-align:center;border-bottom:4px solid var(--accent)}
+.hero .eyebrow{font-size:.85rem;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--accent);font-weight:600;margin-bottom:.6rem}
+.hero h1{font-size:2.6rem;line-height:1.2;margin:.4rem auto .5rem;max-width:14em;
+  border:none;padding:0;color:#fff;display:block;letter-spacing:-.02em}
+.hero .sub{font-size:1.1rem;color:#a8a29e;margin-bottom:1.8rem}
+.hero .pull{font-size:1rem;color:#e7e5e4;max-width:32em;margin:0 auto 1.8rem;
+  font-style:italic;line-height:1.6}
+.hero .pull::before{content:open-quote;font-size:1.5rem;color:var(--accent);margin-right:.1em}
+.hero .pull::after{content:close-quote;font-size:1.5rem;color:var(--accent);margin-left:.1em}
+.hero .cta{display:inline-block;padding:.7rem 1.8rem;background:var(--accent);color:#fff;
+  text-decoration:none;border-radius:6px;font-weight:600;font-size:.95rem;
+  transition:transform .15s,background .15s}
+.hero .cta:hover{background:#92400e;transform:translateY(-1px)}
+/* 项目卡片 */
+.project-card{background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:1.6rem 1.8rem;margin:0 auto 2.5rem;max-width:680px;
+  display:grid;grid-template-columns:auto 1fr;gap:.8rem 1.5rem;align-items:start;font-size:.92rem}
+.project-card .label{color:var(--muted);font-weight:600;white-space:nowrap}
+.project-card .value{color:var(--ink)}
+/* 技术栈 tag */
+.tag{display:inline-block;background:var(--code-bg);color:#92400e;padding:.15rem .6rem;
+  border-radius:10px;font-size:.78rem;margin:.15rem .25rem .15rem 0;
+  font-family:"SF Mono",Consolas,monospace}
+/* 目录卡片网格 */
+.toc-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1rem;margin:1.5rem 0 2.5rem}
+.toc-card{display:block;background:var(--card);border:1px solid var(--border);
+  border-radius:8px;padding:1rem 1.2rem;text-decoration:none;color:var(--ink);
+  transition:border-color .15s,transform .15s;position:relative;padding-left:3.2rem}
+.toc-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.toc-card .num{position:absolute;left:1rem;top:1rem;background:var(--accent);color:#fff;
+  width:1.8rem;height:1.8rem;border-radius:6px;display:flex;align-items:center;
+  justify-content:center;font-weight:700;font-size:.85rem}
+.toc-card .title{font-weight:600;font-size:.98rem;margin-bottom:.2rem}
+.toc-card .desc{color:var(--muted);font-size:.82rem;line-height:1.4}
+.toc-card .time{color:var(--accent);font-size:.75rem;margin-top:.4rem;font-weight:600}
+/* 关于小节（折叠） */
+.about-section{margin-top:3rem;padding:1.5rem;background:#fcfbf7;border-radius:8px;
+  border:1px solid var(--rule);font-size:.9rem;color:var(--muted)}
+.about-section h2{font-size:1.1rem;color:var(--ink);margin:0 0 .8rem;border:none;padding:0;
+  display:block}
+.about-section details summary{cursor:pointer;color:var(--accent);font-weight:600}
+/* 继续阅读卡片 */
+.continue-reading{margin:2.5rem 0;padding:1.5rem;background:var(--card);
+  border:1px solid var(--border);border-radius:10px}
+.continue-reading .label{font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);font-weight:600;margin-bottom:.8rem}
+.continue-reading .next-link{display:block;font-size:1.05rem;font-weight:600;color:var(--accent)}
+.continue-reading .next-desc{font-size:.85rem;color:var(--muted);margin-top:.3rem}
+@media(max-width:640px){
+  .toc-grid{grid-template-columns:1fr}
+  .hero h1{font-size:1.9rem}
+  .project-card{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
@@ -97,139 +155,90 @@ a{color:var(--accent)}
 <header class="essay">
 <div class="eyebrow">案例集</div>
 <h1>demands_agent 案例集</h1>
-<div class="sub">一个数据需求自动分析与实现 Agent 的深度复盘。</div>
 </header>
-<blockquote>
-<p>一个数据需求自动分析与实现 Agent 的深度复盘。
-用途：个人作品集 / 简历素材来源。不是代码搬运，是从项目中提炼的工程经验与方法论。</p>
-</blockquote>
-<h2>这是什么</h2>
-<p>这是一份关于 demands_agent 项目的分层案例集。demands_agent 是一个<strong>把&quot;数据需求从口述到上线&quot;做成可验证交付流水线的内部 Agent</strong>——它真正解决的问题不是&quot;让 LLM 写 SQL&quot;，而是&quot;怎么让一个会写 SQL 的 AI 不在交付这件事上撒谎&quot;。</p>
-<p>这份案例集不复制代码，而是提炼：项目的设计思想、工程结构、可迁移的方法论、真实事故复盘、版本演进。目标是作为个人网站项目 / 简历的素材来源。</p>
-<h2>快速判断：要不要读</h2>
-<table>
-<thead>
-<tr>
-<th>你是</th>
-<th>建议读</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><strong>招聘者 / 30 秒读者</strong></td>
-<td><a href="00-电梯演讲.html">00-电梯演讲</a>（+ <a href="01-痛点与设计.html">01-痛点与设计</a> 如果有时间）</td>
-</tr>
-<tr>
-<td><strong>想理解这个 Agent 怎么运作</strong></td>
-<td><a href="01-痛点与设计.html">01-痛点与设计</a> → <a href="02-工程系统全景.html">02-工程系统全景</a></td>
-</tr>
-<tr>
-<td><strong>想挖方法论、看能不能迁移到自己项目</strong></td>
-<td><a href="03-可迁移法则.html">03-可迁移法则</a>（最值钱的一篇）</td>
-</tr>
-<tr>
-<td><strong>想看真实事故和复盘</strong></td>
-<td><a href="04-真实复盘.html">04-真实复盘</a></td>
-</tr>
-<tr>
-<td><strong>想看一个项目怎么从 v0.1 长到 v1.0-rc</strong></td>
-<td><a href="05-演进史.html">05-演进史</a></td>
-</tr>
-<tr>
-<td><strong>想要诚实的总结（收获 + 局限）</strong></td>
-<td><a href="06-收获与边界.html">06-收获与边界</a></td>
-</tr>
-<tr>
-<td><strong>想看&quot;什么是 Agent&quot;的深度研究笔记</strong></td>
-<td><a href="07-什么是Agent与研究笔记.html">07-什么是Agent与研究笔记</a></td>
-</tr>
-</tbody></table>
-<h2>阅读顺序</h2>
-<p><strong>线性阅读</strong>（推荐第一次读）：00 → 01 → 02 → 03 → 04 → 05 → 06 → 07</p>
-<p><strong>按用途跳读</strong>：</p>
-<ul>
-<li><strong>简历摘录</strong>：00 的&quot;三个最锋利的判断&quot; + 03 的&quot;10 条法则&quot;标题 + 04 的 PM 统计</li>
-<li><strong>面试准备</strong>：00 + 03 + 04 + 06（电梯演讲 + 方法论 + 事故 + 反思）</li>
-<li><strong>技术深聊</strong>：02 + 07（工程全景 + Agent 设计要素与工业鲁棒性）</li>
-</ul>
-<h2>一句话总结这个项目</h2>
-<blockquote>
-<p><strong>不是让 AI 变得更可信，而是用工程边界让&quot;AI 不可信&quot;这件事变得可验证、可拦截、可恢复。</strong></p>
-</blockquote>
+<div class="hero">
+  <div class="eyebrow">fisherever</div>
+  <h1>让 AI 在交付这件事上不撒谎</h1>
+  <div class="sub">一个数据需求 Agent 的工程实践</div>
+  <div class="pull">不是让 AI 变得更可信，而是用工程边界让"不可信"这件事变得可验证、可拦截、可恢复。</div>
+  <a class="cta" href="00-电梯演讲.html">从 00 电梯演讲开始 →</a>
+</div>
+
+<div class="project-card">
+  <div class="label">角色</div>
+  <div class="value">独立设计与开发</div>
+  <div class="label">周期</div>
+  <div class="value">v0.1 → v1.0-rc，十几个 minor 版本迭代</div>
+  <div class="label">技术栈</div>
+  <div class="value">
+    <span class="tag">Python</span><span class="tag">Typer</span><span class="tag">Nebula 血缘</span><span class="tag">StarRocks</span><span class="tag">Hive</span><span class="tag">Presto</span><span class="tag">MySQL</span>
+  </div>
+  <div class="label">规模证据</div>
+  <div class="value">21 篇 postmortem · 16 个能力模块 · 5 层架构 · 1500+ 行工程契约文档</div>
+</div>
+
 <h2>目录</h2>
-<table>
-<thead>
-<tr>
-<th>#</th>
-<th>篇章</th>
-<th>一句话</th>
-<th>篇幅</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>00</td>
-<td><a href="00-电梯演讲.html">00-电梯演讲</a></td>
-<td>30 秒 hook：一句话定义 + 三个最锋利的判断 + 最贵的教训</td>
-<td>短</td>
-</tr>
-<tr>
-<td>01</td>
-<td><a href="01-痛点与设计.html">01-痛点与设计</a></td>
-<td>这事为什么难 + 四道边界怎么压住</td>
-<td>中</td>
-</tr>
-<tr>
-<td>02</td>
-<td><a href="02-工程系统全景.html">02-工程系统全景</a></td>
-<td>五层结构 + 16 个能力 + 产物契约分层</td>
-<td>中</td>
-</tr>
-<tr>
-<td>03</td>
-<td><a href="03-可迁移法则.html">03-可迁移法则</a></td>
-<td>10 条法则卡片（最值钱的产出）</td>
-<td>长</td>
-</tr>
-<tr>
-<td>04</td>
-<td><a href="04-真实复盘.html">04-真实复盘</a></td>
-<td>21 篇 PM 选 5 篇讲透</td>
-<td>长</td>
-</tr>
-<tr>
-<td>05</td>
-<td><a href="05-演进史.html">05-演进史</a></td>
-<td>v0.1 → v1.0-rc 六个里程碑</td>
-<td>中</td>
-</tr>
-<tr>
-<td>06</td>
-<td><a href="06-收获与边界.html">06-收获与边界</a></td>
-<td>三个收获 + 五个局限 + 下一步</td>
-<td>中</td>
-</tr>
-<tr>
-<td>07</td>
-<td><a href="07-什么是Agent与研究笔记.html">07-什么是Agent与研究笔记</a></td>
-<td>Agent 定义 + 设计要素 + 工业鲁棒性（研究型长文）</td>
-<td>长</td>
-</tr>
-</tbody></table>
-<h2>脱敏说明</h2>
-<p>本案例集所有内容已脱敏：</p>
-<ul>
-<li>✅ 保留：项目概念（S0–S4、gate、PEG、FKC 等）、模块名、文件名、版本号、PM 编号、PM 标题（已脱敏）</li>
-<li>❌ 不含：库名 / 表名 / 字段真实值 / SQL 正文 / 凭证 / 业务方名 / 内部 IP / 内部路径 / 任何 PII</li>
-</ul>
-<p>所有标注 <code>[真实产物 · 脱敏]</code> 的代码块，结构是真实的，具体值已替换或为示意。</p>
-<h2>关于 HTML 版本</h2>
-<p>案例集以 Markdown 为唯一源（Obsidian 友好，mermaid 原生渲染）。<code>_sampler/</code> 目录下有一个 HTML 样式参考样例（<code>07-什么是Agent.html</code>），用于评估对外展示时的排版效果，不属于日常维护内容。如需对外展示版本，可基于该 sampler 的样式手工或半自动转换。</p>
-<h2>元信息</h2>
-<ul>
-<li><strong>项目类型</strong>：内部数据需求 Agent（Python + Typer + SSH 查询 + Nebula 血缘 API）</li>
-<li><strong>案例集定位</strong>：个人作品集 / 简历素材来源</li>
-<li><strong>文风</strong>：第一人称、法则化、判断直接；对标 <code>AIx/agents/研究/</code> 的研究型长文风格</li>
-<li><strong>核心价值</strong>：可迁移的工程纪律，不是代码</li>
-</ul>
+<div class="toc-grid">
+  <a class="toc-card" href="00-电梯演讲.html">
+    <span class="num">00</span>
+    <div class="title">电梯演讲</div>
+    <div class="desc">三个最锋利的判断 + 一个最贵的教训</div>
+    <div class="time">2 分钟</div>
+  </a>
+  <a class="toc-card" href="01-痛点与设计.html">
+    <span class="num">01</span>
+    <div class="title">痛点与设计</div>
+    <div class="desc">这事为什么难，四道边界怎么压住</div>
+    <div class="time">5 分钟</div>
+  </a>
+  <a class="toc-card" href="02-工程系统全景.html">
+    <span class="num">02</span>
+    <div class="title">工程系统全景</div>
+    <div class="desc">五层结构 + 16 个能力 + 产物契约分层</div>
+    <div class="time">7 分钟</div>
+  </a>
+  <a class="toc-card" href="03-可迁移法则.html">
+    <span class="num">03</span>
+    <div class="title">可迁移法则</div>
+    <div class="desc">10 条法则卡片（最值钱的产出）</div>
+    <div class="time">8 分钟</div>
+  </a>
+  <a class="toc-card" href="04-真实复盘.html">
+    <span class="num">04</span>
+    <div class="title">真实复盘</div>
+    <div class="desc">21 篇 postmortem 选 5 篇讲透</div>
+    <div class="time">8 分钟</div>
+  </a>
+  <a class="toc-card" href="05-演进史.html">
+    <span class="num">05</span>
+    <div class="title">演进史</div>
+    <div class="desc">v0.1 → v1.0-rc 六个里程碑</div>
+    <div class="time">5 分钟</div>
+  </a>
+  <a class="toc-card" href="06-收获与边界.html">
+    <span class="num">06</span>
+    <div class="title">收获与边界</div>
+    <div class="desc">三个收获 + 五个局限 + 下一步</div>
+    <div class="time">4 分钟</div>
+  </a>
+  <a class="toc-card" href="07-什么是Agent与研究笔记.html">
+    <span class="num">07</span>
+    <div class="title">什么是 Agent</div>
+    <div class="desc">定义 + 设计要素 + 工业鲁棒性（研究型长文）</div>
+    <div class="time">10 分钟</div>
+  </a>
+</div>
+
+<div class="about-section">
+<details>
+<summary>关于这个案例集</summary>
+
+<p>这是关于一个内部数据需求 Agent 项目的工程实践提炼。项目本身解决的核心问题不是&quot;让 LLM 写 SQL&quot;，而是&quot;怎么让一个会写 SQL 的 AI 不在交付这件事上撒谎&quot;。</p>
+<p>案例集不复制代码，而是提炼设计思想、工程结构、可迁移方法论、真实事故复盘、版本演进。</p>
+<p><strong>脱敏说明</strong>：所有内容已脱敏，不包含库名 / 表名 / 字段真实值 / SQL 正文 / 凭证 / 业务方名 / 内部路径 / 任何 PII。保留通用开源技术名和通用业务概念作为技术深度的证据。</p>
+<p><strong>技术实现</strong>：Markdown 源（Obsidian 友好，mermaid 原生渲染）经自建转换器（Node.js + marked）生成静态 HTML，部署在 GitHub Pages。仓库见 <a href="https://github.com/fisherever/agent-case-study">github.com/fisherever/agent-case-study</a>。</p>
+</details>
+</div>
 
 
 </div>

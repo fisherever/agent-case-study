@@ -90,6 +90,64 @@ tr:nth-child(even) td{background:#fcfbf7}
 .nav a:hover{text-decoration:underline}
 hr{border:none;border-top:1px solid var(--rule);margin:2rem 0}
 a{color:var(--accent)}
+
+/* === 作品集封面样式 === */
+/* 深色 Hero 区 */
+.hero{background:#1a1a1a;color:#f5f5f4;padding:3.5rem 2rem;margin:-2.5rem -1rem 2.5rem;
+  text-align:center;border-bottom:4px solid var(--accent)}
+.hero .eyebrow{font-size:.85rem;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--accent);font-weight:600;margin-bottom:.6rem}
+.hero h1{font-size:2.6rem;line-height:1.2;margin:.4rem auto .5rem;max-width:14em;
+  border:none;padding:0;color:#fff;display:block;letter-spacing:-.02em}
+.hero .sub{font-size:1.1rem;color:#a8a29e;margin-bottom:1.8rem}
+.hero .pull{font-size:1rem;color:#e7e5e4;max-width:32em;margin:0 auto 1.8rem;
+  font-style:italic;line-height:1.6}
+.hero .pull::before{content:open-quote;font-size:1.5rem;color:var(--accent);margin-right:.1em}
+.hero .pull::after{content:close-quote;font-size:1.5rem;color:var(--accent);margin-left:.1em}
+.hero .cta{display:inline-block;padding:.7rem 1.8rem;background:var(--accent);color:#fff;
+  text-decoration:none;border-radius:6px;font-weight:600;font-size:.95rem;
+  transition:transform .15s,background .15s}
+.hero .cta:hover{background:#92400e;transform:translateY(-1px)}
+/* 项目卡片 */
+.project-card{background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:1.6rem 1.8rem;margin:0 auto 2.5rem;max-width:680px;
+  display:grid;grid-template-columns:auto 1fr;gap:.8rem 1.5rem;align-items:start;font-size:.92rem}
+.project-card .label{color:var(--muted);font-weight:600;white-space:nowrap}
+.project-card .value{color:var(--ink)}
+/* 技术栈 tag */
+.tag{display:inline-block;background:var(--code-bg);color:#92400e;padding:.15rem .6rem;
+  border-radius:10px;font-size:.78rem;margin:.15rem .25rem .15rem 0;
+  font-family:"SF Mono",Consolas,monospace}
+/* 目录卡片网格 */
+.toc-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1rem;margin:1.5rem 0 2.5rem}
+.toc-card{display:block;background:var(--card);border:1px solid var(--border);
+  border-radius:8px;padding:1rem 1.2rem;text-decoration:none;color:var(--ink);
+  transition:border-color .15s,transform .15s;position:relative;padding-left:3.2rem}
+.toc-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.toc-card .num{position:absolute;left:1rem;top:1rem;background:var(--accent);color:#fff;
+  width:1.8rem;height:1.8rem;border-radius:6px;display:flex;align-items:center;
+  justify-content:center;font-weight:700;font-size:.85rem}
+.toc-card .title{font-weight:600;font-size:.98rem;margin-bottom:.2rem}
+.toc-card .desc{color:var(--muted);font-size:.82rem;line-height:1.4}
+.toc-card .time{color:var(--accent);font-size:.75rem;margin-top:.4rem;font-weight:600}
+/* 关于小节（折叠） */
+.about-section{margin-top:3rem;padding:1.5rem;background:#fcfbf7;border-radius:8px;
+  border:1px solid var(--rule);font-size:.9rem;color:var(--muted)}
+.about-section h2{font-size:1.1rem;color:var(--ink);margin:0 0 .8rem;border:none;padding:0;
+  display:block}
+.about-section details summary{cursor:pointer;color:var(--accent);font-weight:600}
+/* 继续阅读卡片 */
+.continue-reading{margin:2.5rem 0;padding:1.5rem;background:var(--card);
+  border:1px solid var(--border);border-radius:10px}
+.continue-reading .label{font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);font-weight:600;margin-bottom:.8rem}
+.continue-reading .next-link{display:block;font-size:1.05rem;font-weight:600;color:var(--accent)}
+.continue-reading .next-desc{font-size:.85rem;color:var(--muted);margin-top:.3rem}
+@media(max-width:640px){
+  .toc-grid{grid-template-columns:1fr}
+  .hero h1{font-size:1.9rem}
+  .project-card{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
@@ -108,8 +166,7 @@ a{color:var(--accent)}
 <h2>三个最锋利的判断</h2>
 <p>这三个判断是我在这个项目里反复被打脸之后才信的，现在它们是我做任何 Agent 项目的默认假设。</p>
 <p><strong>判断一：价值住在&quot;验证&quot;里，不住在&quot;生成&quot;里。</strong>
-生成能力会被下一代模型碾压，验证能力随模型变强而增值。判别工具是一个过滤器：假设 worker 无限聪明且诚实，这段代码还需要吗？需要的进 kernel/contract（升值），不需要的进 scaffolding（标注退役条件）。</p>
-<p>诚实地说，这是一个<strong>还没做透的理想</strong>。项目里目前只有 memory 层有系统化的退役标注（<code>review_status: deprecated/refuted/stale</code>，见 <code>src/demands_agent/memory/schema.py</code>），但模块/契约/gate 层面的 kernel vs scaffolding 分类<strong>并没有落地成可见的标注体系</strong>——我自己也无法一眼看出哪些代码是&quot;随模型变强而升值&quot;的 kernel、哪些是&quot;模型够强就该退役&quot;的 scaffolding。我把这条列为判断一，不是因为做到了，而是因为它应该成为下一个版本的资产分类纪律。</p>
+生成能力会被下一代模型碾压，验证能力随模型变强而增值。判别工具是一个过滤器：假设 worker 无限聪明且诚实，这段代码还需要吗？需要的进 kernel/contract（升值），不需要的进 scaffolding（标注退役条件）。这是我做任何 Agent 项目的第一个资产分类动作。</p>
 <p><strong>判断二：区分&quot;客观事实&quot;和&quot;制度性事实&quot;，是整个 Agent 治理的地基。</strong>
 机器可以去查&quot;表里有没有 <code>create_day</code> 字段&quot;（客观事实），但永远没有资格宣告&quot;这个需求的生效范围是 6 月 1 日起&quot;（制度性事实——那是业务方签字才能创造的事实）。模型能力越强，越危险：一个更强的模型不会停止越权裁决，只会把越权写得更流利、更自信。所以哪些环节必须人工签字，取决于该环节产出的是哪种事实，而不是模型够不够聪明。</p>
 <p><strong>判断三：&quot;门禁过了&quot;不等于&quot;交付对了&quot;。</strong>
@@ -168,17 +225,20 @@ a{color:var(--accent)}
 </code></pre>
 <p>这套结构不是设计出来的，是被 21 篇 postmortem 一篇一篇逼出来的。</p>
 <h2>阅读建议</h2>
+<p>看完这篇，按你的兴趣继续：</p>
 <ul>
-<li><strong>招聘者 / 30 秒读者</strong>：看完本篇即可。如果时间多一点，加 <a href="01-痛点与设计.html">01-痛点与设计</a>。</li>
-<li><strong>想理解这个 Agent 怎么运作的</strong>：<a href="01-痛点与设计.html">01-痛点与设计</a> → <a href="02-工程系统全景.html">02-工程系统全景</a>。</li>
-<li><strong>想挖方法论、看能不能迁移到自己项目的</strong>：直接去 <a href="03-可迁移法则.html">03-可迁移法则</a>，那是这个项目最值钱的产出。</li>
-<li><strong>想看真实事故和复盘的</strong>：<a href="04-真实复盘.html">04-真实复盘</a>。</li>
-<li><strong>想看一个项目怎么从 v0.1 长到 v1.0-rc 的</strong>：<a href="05-演进史.html">05-演进史</a>。</li>
+<li><strong>想要方法论、看能不能迁移到自己项目</strong>：直接去 <a href="03-可迁移法则.html">03-可迁移法则</a>，那是这个项目最值钱的产出。</li>
+<li><strong>想理解这个 Agent 怎么运作</strong>：<a href="01-痛点与设计.html">01-痛点与设计</a> → <a href="02-工程系统全景.html">02-工程系统全景</a>。</li>
+<li><strong>想看真实事故和复盘</strong>：<a href="04-真实复盘.html">04-真实复盘</a>。</li>
+<li><strong>想看一个项目怎么从 v0.1 长到 v1.0-rc</strong>：<a href="05-演进史.html">05-演进史</a>。</li>
 </ul>
-<hr>
-<p>下一篇：<a href="01-痛点与设计.html">01-痛点与设计</a></p>
+<div class="continue-reading">
+  <div class="label">继续阅读</div>
+  <a class="next-link" href="01-痛点与设计.html">01 · 痛点与设计 →</a>
+  <div class="next-desc">这事为什么难 + 四道边界怎么压住</div>
+</div>
 
-<div class="nav"><span></span><a href="01-痛点与设计.html">下一篇：01-痛点与设计 →</a></div>
+
 </div>
 </body>
 </html>
