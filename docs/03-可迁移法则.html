@@ -226,7 +226,7 @@ a{color:var(--accent)}
 <h2>法则 8：分类系统要&quot;封闭起步、按需生长&quot;，否则一定退化成杂物抽屉</h2>
 <ul>
 <li><strong>反例</strong>：如果允许 <code>finding_kind</code> / <code>check_type</code> / <code>violation_type</code> 这类字段随手填任意字符串，半年后字段里躺着四十个类型——重复、遗忘、只用过一次。分类系统就死了。</li>
-<li><strong>原则</strong>：两条纪律的组合。<strong>第一，起步封闭</strong>：第一版只放确实需要的少数几个类型，不在名单里的值直接拒绝。<strong>第二，判例驱动生长</strong>：新类型必须由真实案例逼出来，且新增时必须回答三个问题——这个类型的事实由谁有权写入？需要什么证据支撑？什么条件下会失效？回答不了就不许进。</li>
+<li><strong>原则</strong>：两条纪律的组合。<strong>第一，起步封闭</strong>：第一版只放确实需要的少数几个类型，不在名单里的值直接拒绝。<strong>第二，判例驱动生长</strong>：新类型必须由真实案例催生，且新增时必须回答三个问题——这个类型的事实由谁有权写入？需要什么证据支撑？什么条件下会失效？回答不了就不许进。</li>
 <li><strong>本项目实例</strong>：postmortem 的 Category 只有三个（Config / Process / Data），但够用。<code>finding_kind</code> 第一版只有四个值。分类系统像法律一样，由判例驱动扩充，而不是由立法者的想象力驱动扩充。</li>
 <li><strong>如何迁移</strong>：任何涉及&quot;类型字段&quot;的设计，默认封闭起步。想加新值？强制回答三问。这条治好了我多次&quot;杂物抽屉化&quot;的病。</li>
 </ul>

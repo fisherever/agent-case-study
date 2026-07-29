@@ -159,29 +159,29 @@ a{color:var(--accent)}
 </header>
 <blockquote>
 <p>为什么读这篇：一个项目怎么从&quot;能跑的脚本&quot;长成&quot;有治理纪律的 Agent 系统&quot;，版本演进是最硬的证据。
-读完带走：六个版本里程碑 + 每个里程碑&quot;长出了什么能力 + 被什么逼出来的&quot;。</p>
+读完带走：六个版本里程碑 + 每个里程碑&quot;长出了什么能力 + 源自哪些事故&quot;。</p>
 </blockquote>
 <h2>版本主轴：一条曲线，不是一堆散点</h2>
-<p>demands_agent 从 v0.1 到 v1.0-rc，有三十多个 release。但真正定义这条演进曲线的是<strong>六个里程碑版本</strong>——每个里程碑都对应一个&quot;治理主题&quot;，且每个主题都是被真实事故逼出来的。</p>
+<p>demands_agent 从 v0.1 到 v1.0-rc，有三十多个 release。但真正定义这条演进曲线的是<strong>六个里程碑版本</strong>——每个里程碑都对应一个&quot;治理主题&quot;，且每个主题都源自真实事故的复盘。</p>
 <div class="mermaid">timeline
     title demands_agent 版本主轴
     section 奠基期
         v0.1-0.3 : SOP 流水线 + 门禁雏形
                  : 7 个核心 Skills
-                 : 被早期"绕过 SOP"事故逼出
+                 : 源自早期"绕过 SOP"事故
     section 硬化期
         v0.3-0.6 : Evidence v0.6 权威证据
                  : Typed routing
                  : Prerelease Go/No-Go
-                 : 被"形式合规撒谎"逼出
+                 : 源自"形式合规撒谎"事故
     section 记忆期
         v0.7     : 长期记忆闭环
                  : 5 类 ingestion + governance
-                 : 被 PM-020 知识结晶失败逼出
+                 : 源自 PM-020 知识结晶失败
     section 运行态期
         v0.9     : Agent runtime release train
                  : PEG + DB 隔离 + 审批副作用
-                 : 被"raw data 上云"风险逼出
+                 : 源自"raw data 上云"风险
     section 治理成熟期
         v0.10    : 生产级 FKC 记忆
                  : Fact/Knowledge/Cognition 分层
@@ -202,7 +202,7 @@ a{color:var(--accent)}
 <li>v0.2.3 起 typed routing（standard / complex / diagnostic）。</li>
 <li>v0.3.0 prerelease hardening + Go/No-Go closeout。</li>
 </ul>
-<p><strong>被什么逼出来</strong>：PM-001~005 这批最早的事故——技能路径不一致、绕过 SOP、未做字段核验、Hook 未闭环。这个阶段的核心教训是&quot;光有 SOP 文本不够，必须有机器执行的门禁&quot;。</p>
+<p><strong>源自哪些事故</strong>：PM-001~005 这批最早的事故——技能路径不一致、绕过 SOP、未做字段核验、Hook 未闭环。这个阶段的核心教训是&quot;光有 SOP 文本不够，必须有机器执行的门禁&quot;。</p>
 <h3>v0.3–v0.6：硬化期 — Evidence v0.6 + Typed Routing</h3>
 <p><strong>长出了什么</strong>：</p>
 <ul>
@@ -211,7 +211,7 @@ a{color:var(--accent)}
 <li>Prerelease evidence-basis synthesis + 显式 Go/No-Go closeout。</li>
 <li>v0.6 的 scoping 和 implementation spec 把 evidence authenticity 写成硬约束。</li>
 </ul>
-<p><strong>被什么逼出来</strong>：PM-003（未做字段核验直接猜测）、PM-007（lineage 误用）、PM-009（SR 发布范围未做对象存在性核查）。这个阶段的核心教训是&quot;门禁必须消费结构化 evidence，不能消费叙述&quot;——<code>analysis.md</code> 里写&quot;看起来像验证过&quot;已经不足以通过 S3/S4 门禁。</p>
+<p><strong>源自哪些事故</strong>：PM-003（未做字段核验直接猜测）、PM-007（lineage 误用）、PM-009（SR 发布范围未做对象存在性核查）。这个阶段的核心教训是&quot;门禁必须消费结构化 evidence，不能消费叙述&quot;——<code>analysis.md</code> 里写&quot;看起来像验证过&quot;已经不足以通过 S3/S4 门禁。</p>
 <h3>v0.7：记忆期 — 长期记忆闭环</h3>
 <p><strong>长出了什么</strong>：</p>
 <ul>
@@ -223,7 +223,7 @@ a{color:var(--accent)}
 <li>CC PreToolUse 保护：阻止手写 memory、篡改 index、伪造 citation。</li>
 <li>Fault injection：9 个 memory 滥用场景全量 fail-closed。</li>
 </ul>
-<p><strong>被什么逼出来</strong>：PM-020（dwh-quality 知识结晶失败）。这次事故的直接产物是 <a href="03-可迁移法则.html">03-可迁移法则</a> 法则 9（资料 ≠ 知识点）和 effective knowledge point 的五个必要条件。v0.7 把&quot;经验复用&quot;从文档阅读推进到可召回、可引用、可证伪、可门禁的长期记忆层。</p>
+<p><strong>源自哪些事故</strong>：PM-020（dwh-quality 知识结晶失败）。这次事故的直接产物是 <a href="03-可迁移法则.html">03-可迁移法则</a> 法则 9（资料 ≠ 知识点）和 effective knowledge point 的五个必要条件。v0.7 把&quot;经验复用&quot;从文档阅读推进到可召回、可引用、可证伪、可门禁的长期记忆层。</p>
 <h3>v0.9：运行态期 — Agent Runtime Release Train</h3>
 <p><strong>长出了什么</strong>（v0.9.1–v0.9.5 一条完整的 release train）：</p>
 <div class="mermaid">flowchart LR
@@ -244,7 +244,7 @@ a{color:var(--accent)}
 <li><strong>Guarded resume</strong>：checkpoint hash + timeline tail 校验。</li>
 <li><strong>Approval-gated side effects</strong>：plan → preview → approval → execute → post-check → rollback。</li>
 </ul>
-<p><strong>被什么逼出来</strong>：raw data / credential 溜进云端模型的风险，以及长任务中断后无法恢复的工程痛点。这个阶段的核心是&quot;让 Agent 的执行变得可控制、可审计、可恢复&quot;。</p>
+<p><strong>源自哪些事故</strong>：raw data / credential 溜进云端模型的风险，以及长任务中断后无法恢复的工程痛点。这个阶段的核心是&quot;让 Agent 的执行变得可控制、可审计、可恢复&quot;。</p>
 <h3>v0.10：治理成熟期 — 生产级 FKC 记忆</h3>
 <p><strong>长出了什么</strong>：</p>
 <ul>
@@ -274,7 +274,7 @@ a{color:var(--accent)}
 <th>版本</th>
 <th>主题</th>
 <th>核心产出</th>
-<th>逼出来的事故</th>
+<th>源自的事故</th>
 </tr>
 </thead>
 <tbody><tr>

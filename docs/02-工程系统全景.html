@@ -162,7 +162,7 @@ a{color:var(--accent)}
 读完带走：模块地图 + 能力清单（C01–C16）+ 产物契约分层 + 数据如何在各层流动。</p>
 </blockquote>
 <h2>一张图：系统的五个层</h2>
-<p>demands_agent 不是单体应用，是五层严格分离的结构。<strong>每一层有自己的边界，不互相覆盖</strong>——这是被 PM-018（SOP 形式遵循）逼出来的：如果层与层之间没有硬边界，AI 会在叙述里把多层揉成一团，掩盖掉任何一层的漏洞。</p>
+<p>demands_agent 不是单体应用，是五层严格分离的结构。<strong>每一层有自己的边界，不互相覆盖</strong>——这个设计源自 PM-018（SOP 形式遵循）的教训：如果层与层之间没有硬边界，AI 会在叙述里把多层揉成一团，掩盖掉任何一层的漏洞。</p>
 <div class="mermaid">flowchart TD
     subgraph L5["Layer 5 · 产品客户端"]
         direction LR

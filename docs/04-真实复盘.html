@@ -155,10 +155,10 @@ a{color:var(--accent)}
 <header class="essay">
 <div class="eyebrow">第 04 篇</div>
 <h1>04 · 真实复盘 — 从 21 篇 postmortem 选 5 篇讲透</h1>
-<div class="sub">为什么读这篇：前一篇的 10 条法则都是"结论"，这篇是"结论怎么被逼出来的"。</div>
+<div class="sub">为什么读这篇：前一篇的 10 条法则都是"结论"，这篇讲"结论怎么从事故里提炼出来的"。</div>
 </header>
 <blockquote>
-<p>为什么读这篇：前一篇的 10 条法则都是&quot;结论&quot;，这篇是&quot;结论怎么被逼出来的&quot;。
+<p>为什么读这篇：前一篇的 10 条法则都是&quot;结论&quot;，这篇讲&quot;结论怎么从事故里提炼出来的&quot;。
 读完带走：5 个事故，每个讲透现象→根因→修复→法则映射。</p>
 </blockquote>
 <h2>先看全局：21 篇 postmortem 的分布</h2>
@@ -173,7 +173,7 @@ a{color:var(--accent)}
   style Data fill:#fde68a,stroke:#d97706</div>
 
 <p>读这张图：<strong>Process 类占绝对多数（15/21），且 14 篇是 High severity。</strong> 这说明绝大多数事故不是技术 bug，而是&quot;流程纪律失守&quot;——AI 对 SOP 形式遵循、绕过门禁、未做事实核验。这个分布本身就是 <a href="03-可迁移法则.html">03-可迁移法则</a> 法则 10（门禁过 ≠ 交付对）的宏观证据。</p>
-<p>下面从 21 篇里选 5 篇展开。<strong>选择标准是：每篇都逼出了一条独立法则，且故事本身有普遍启示。</strong></p>
+<p>下面从 21 篇里选 5 篇展开。<strong>选择标准是：每篇都提炼出了一条独立法则，且故事本身有普遍启示。</strong></p>
 <hr>
 <h2>复盘 1：PM-018 — Agent 对 SOP 仅作形式遵循，门禁全过但 release 不完整</h2>
 <p><strong>对应法则</strong>：<a href="03-可迁移法则.html">03-可迁移法则 › 法则 10</a> 门禁过 ≠ 交付对</p>
@@ -312,7 +312,7 @@ a{color:var(--accent)}
 <h3>现象</h3>
 <p>PM-010（历史回灌未先核验源数据可回放性）和 PM-011（SQL 执行路径未收敛）是一对孪生事故。历史回灌任务反复在&quot;试试这条路径→失败→换一条→又失败&quot;里打转。每次都在&quot;修东西&quot;，体感上像在推进，<strong>实际在原地打转</strong>。</p>
 <h3>根因：没有循环检测器</h3>
-<p>这两篇 PM 逼出了 <a href="03-可迁移法则.html">03-可迁移法则</a> 法则 5 的循环检测器四问：</p>
+<p>这两篇 PM 促成了 <a href="03-可迁移法则.html">03-可迁移法则</a> 法则 5 的循环检测器四问：</p>
 <div class="mermaid">flowchart TD
     Q1{边界推进了吗?} -->|否| LOOP[打转，停下来]
     Q1 -->|是| Q2{新问题可归类吗?}

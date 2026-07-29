@@ -164,7 +164,7 @@ a{color:var(--accent)}
 </blockquote>
 <h2>执行摘要</h2>
 <p>做完 demands_agent 之后，我对&quot;什么是 Agent&quot;的定义收窄了。<strong>一个真正的 Agent 不是更长的 prompt、不是一组脚本、也不是一个 IM bot——它是一个由 runtime 控制的任务交付系统：能把一个任务带过规划、执行、验证、恢复、学习，同时保留证据、决策归属和可恢复状态。</strong></p>
-<p>这个定义不是我拍脑袋想的，是被 21 篇 postmortem 一篇一篇逼出来的。最早我以为&quot;Agent = LLM + 工具调用&quot;，后来被&quot;AI 在交付里形式合规地撒谎&quot;打脸（PM-003）；加上&quot;门禁形式通过但语义漏项&quot;（PM-018）、&quot;AI 越权裁决业务语义&quot;（PM-010）、&quot;raw data 溜进云端&quot;（数据边界事故）这几次之后，我才意识到：<strong>会想、会写、会调用工具，只是 Agent 的&quot;能力面&quot;；真正让一个 Agent 能在工业现场上岗的，是它的&quot;治理面&quot;和&quot;运行态面&quot;。</strong></p>
+<p>这个定义不是我拍脑袋想的，是在 21 篇 postmortem 的复盘过程中，一篇一篇提炼出来的。最早我以为&quot;Agent = LLM + 工具调用&quot;，后来被&quot;AI 在交付里形式合规地撒谎&quot;打脸（PM-003）；加上&quot;门禁形式通过但语义漏项&quot;（PM-018）、&quot;AI 越权裁决业务语义&quot;（PM-010）、&quot;raw data 溜进云端&quot;（数据边界事故）这几次之后，我才意识到：<strong>会想、会写、会调用工具，只是 Agent 的&quot;能力面&quot;；真正让一个 Agent 能在工业现场上岗的，是它的&quot;治理面&quot;和&quot;运行态面&quot;。</strong></p>
 <p>本文把这三面拆成六个不可妥协的设计要素，再用 demands_agent 的真实机制回答一个核心问题：<strong>怎么让一个长程任务（跨多次工具调用、跨人工审批、跨中断恢复）在工业现场可重跑、可断点、可审计。</strong></p>
 <p>文中的每一条机制都对应 demands_agent 里的真实产物或代码契约，不是泛泛而谈。</p>
 <hr>
@@ -277,13 +277,13 @@ sensitive/raw/          敏感原始区（限制权限，local-only）
 <p>demands_agent 的解法是两条纪律的组合：</p>
 <ol>
 <li><strong>起步封闭</strong>：第一版只放确实需要的少数几个类型，不在名单里的值直接拒绝。</li>
-<li><strong>判例驱动生长</strong>：新类型必须由真实案例逼出来，且新增时必须回答三个问题——这个类型的事实由谁有权写入？需要什么证据支撑？什么条件下会失效？回答不了就不许进。</li>
+<li><strong>判例驱动生长</strong>：新类型必须由真实案例催生，且新增时必须回答三个问题——这个类型的事实由谁有权写入？需要什么证据支撑？什么条件下会失效？回答不了就不许进。</li>
 </ol>
 <p><strong>纪律是：分类系统像法律一样，由判例驱动扩充，而不是由立法者的想象力驱动扩充。</strong> 详见 <a href="03-可迁移法则.html">03-可迁移法则</a> 法则 8。</p>
 <hr>
 <h2>三、长程任务的工业鲁棒性 — 五条具体机制</h2>
 <p>这是本文最实用的一节。很多 Agent demo 能在 happy path 上跑得很漂亮，一上工业现场就崩——原因是长程任务（跨多次工具调用、跨人工审批、跨中断恢复）需要一套工业鲁棒性机制，而这些机制在 demo 阶段根本不会被触发。</p>
-<p>下面五条机制，每一条都对应 demands_agent 里被真实事故逼出来的实现。我把它们写成&quot;问题 → 机制 → 反例&quot;的形式，方便迁移到别的 Agent 项目。</p>
+<p>下面五条机制，每一条都对应 demands_agent 里从事故复盘中提炼出来的实现。我把它们写成&quot;问题 → 机制 → 反例&quot;的形式，方便迁移到别的 Agent 项目。</p>
 <h3>机制 1：显式的 Run State Model — 把&quot;等外部输入&quot;从失败里救出来</h3>
 <p><strong>问题</strong>：Agent 在 S2 阶段需要业务方确认一个字段口径，但业务方还没回复。传统做法是把这次 run 标成 <code>failed</code>——这等于把&quot;等待&quot;和&quot;做错了&quot;混为一谈。下次想恢复时，系统会以为这是个失败任务，要么从头来，要么需要人工澄清。</p>
 <p><strong>机制</strong>：显式区分四种 run state，并定义合法迁移：</p>
@@ -442,7 +442,7 @@ failed                           终态失败
 <td><code>memory/fkc_schema.py</code> 的 FactRecord/KnowledgeEntry/CognitionPolicy</td>
 </tr>
 </tbody></table>
-<p>想看这些机制怎么在一个真实需求里串起来，回到 <a href="02-工程系统全景.html">02-工程系统全景</a>。想看它们怎么被事故逼出来的，去 <a href="04-真实复盘.html">04-真实复盘</a>。</p>
+<p>想看这些机制怎么在一个真实需求里串起来，回到 <a href="02-工程系统全景.html">02-工程系统全景</a>。想看它们从事故里怎么提炼出来的，去 <a href="04-真实复盘.html">04-真实复盘</a>。</p>
 <hr>
 
 <div class="nav"><a href="06-收获与边界.html">← 上一篇：06-收获与边界</a><span></span></div>
