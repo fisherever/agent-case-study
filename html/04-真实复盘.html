@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>04 · 真实复盘 — 从 21 篇 postmortem 选 5 篇讲透</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>document.addEventListener("DOMContentLoaded",()=>{
+  mermaid.initialize({startOnLoad:true,theme:"neutral",securityLevel:"loose"});
+  // lightbox：点击 mermaid 块 → 全屏放大；点遮罩关闭；ESC 关闭
+  // 关键：mermaid 渲染后会把 .mermaid 里的文本替换成 svg，所以点击时
+  // 要在 lightbox 里重建一个 .mermaid div 放原始文本，再调用 mermaid.run() 重新渲染
+  const lb=document.createElement("div");lb.className="lightbox";document.body.appendChild(lb);
+  // 保存每张图的原始 mermaid 代码（渲染前抓取）
+  const sources=new Map();
+  document.querySelectorAll(".mermaid").forEach((m,i)=>{
+    sources.set(i,m.textContent);m.dataset.src=i;
+  });
+  document.querySelectorAll(".mermaid").forEach((m,i)=>{
+    m.addEventListener("click",async()=>{
+      const srcId=m.dataset.src;
+      const code=sources.get(Number(srcId));
+      const holder=document.createElement("div");
+      holder.className="mermaid-holder";
+      lb.innerHTML="";lb.appendChild(holder);lb.classList.add("open");
+      // 用 mermaid.render 拿 svg 字符串（不依赖 .mermaid class，避免 run() 的 class 识别问题）
+      try{
+        const {svg}=await mermaid.render("lb"+Date.now(),code);
+        holder.innerHTML=svg;
+        const s=holder.querySelector("svg");
+        // 从 viewBox 解析原始内容尺寸，强制设为绝对像素（覆盖 mermaid 的 width:100%/max-width 限制）
+        const vb=(s.getAttribute("viewBox")||"").split(" ");
+        const w=parseFloat(vb[2]),h=parseFloat(vb[3]);
+        if(w&&h){s.removeAttribute("style");s.setAttribute("width",w);s.setAttribute("height",h);}
+      }catch(e){console.error("lightbox render failed",e);holder.textContent="渲染失败: "+e.message}
+    });
+  });
+  lb.addEventListener("click",()=>lb.classList.remove("open"));
+  document.addEventListener("keydown",e=>{if(e.key==="Escape")lb.classList.remove("open")});
+})</script>
+<style>
+:root {
+  --bg:#fafaf7; --card:#ffffff; --ink:#1f2328; --muted:#57606a;
+  --accent:#b45309; --accent-soft:#fef3c7; --rule:#e5e3dd;
+  --code-bg:#f6f3ee; --border:#d6d3c7;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:2.5rem 1rem 4rem;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,"PingFang SC","Noto Sans CJK SC","Helvetica Neue",sans-serif;
+  line-height:1.75;font-size:16px}
+.wrap{max-width:820px;margin:0 auto}
+header.essay{text-align:center;margin-bottom:2.5rem;padding-bottom:1.5rem;border-bottom:1px solid var(--rule)}
+header.essay .eyebrow{font-size:.8rem;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);font-weight:600}
+header.essay h1{font-size:2rem;margin:.5rem 0;letter-spacing:-.01em}
+header.essay .sub{color:var(--muted);font-size:.95rem}
+h1{font-size:1.8rem;margin:2rem 0 .8rem;padding-bottom:.4rem;border-bottom:2px solid var(--accent);display:inline-block}
+h2{font-size:1.4rem;margin:2.5rem 0 .8rem;padding-bottom:.4rem;border-bottom:1px solid var(--rule)}
+h3{font-size:1.15rem;margin:1.8rem 0 .5rem}
+h4{font-size:1rem;margin:1.2rem 0 .4rem;color:var(--accent)}
+p{margin:.6rem 0}
+strong{color:var(--ink)} em{color:var(--accent);font-style:normal;font-weight:600}
+blockquote{margin:1.2rem 0;padding:.9rem 1.2rem;background:var(--accent-soft);
+  border-left:4px solid var(--accent);border-radius:0 6px 6px 0;color:#78350f}
+blockquote p{margin:.3rem 0}
+ul,ol{padding-left:1.4rem} li{margin:.3rem 0}
+code{background:var(--code-bg);padding:.1rem .4rem;border-radius:3px;
+  font-family:"SF Mono","JetBrains Mono",Consolas,monospace;font-size:.88em;color:#92400e}
+pre{background:#1f2328;color:#e6edf3;padding:1rem 1.2rem;border-radius:8px;
+  overflow-x:auto;font-size:.85rem;line-height:1.5}
+pre code{background:none;color:inherit;padding:0}
+table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.9rem}
+th,td{border:1px solid var(--border);padding:.6rem .8rem;text-align:left;vertical-align:top}
+th{background:var(--code-bg);font-weight:600}
+tr:nth-child(even) td{background:#fcfbf7}
+.mermaid{margin:1.5rem 0;text-align:center;background:var(--card);
+  padding:1rem;border-radius:8px;border:1px solid var(--rule);
+  cursor:zoom-in;position:relative;transition:box-shadow .15s}
+.mermaid:hover{box-shadow:0 0 0 2px var(--accent)}
+.mermaid::after{content:"点击放大";position:absolute;top:.4rem;right:.6rem;
+  font-size:.7rem;color:var(--muted);opacity:.7}
+/* lightbox：点击 mermaid 后的全屏遮罩 */
+.lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);
+  z-index:9999;overflow:auto;padding:2rem;cursor:zoom-out}
+.lightbox.open{display:flex;align-items:center;justify-content:center}
+.lightbox .mermaid-holder{background:var(--card);border-radius:8px;padding:1.5rem;
+  display:inline-block;cursor:default}
+.nav{display:flex;justify-content:space-between;margin:3rem 0 0;padding:1.2rem 0 0;
+  border-top:1px solid var(--rule);font-size:.9rem}
+.nav a{color:var(--accent);text-decoration:none}
+.nav a:hover{text-decoration:underline}
+hr{border:none;border-top:1px solid var(--rule);margin:2rem 0}
+a{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="essay">
+<div class="eyebrow">第 04 篇</div>
+<h1>04 · 真实复盘 — 从 21 篇 postmortem 选 5 篇讲透</h1>
+<div class="sub">为什么读这篇：前一篇的 10 条法则都是"结论"，这篇是"结论怎么被逼出来的"。</div>
+</header>
+<blockquote>
+<p>为什么读这篇：前一篇的 10 条法则都是&quot;结论&quot;，这篇是&quot;结论怎么被逼出来的&quot;。
+读完带走：5 个最有讲头的事故，每个讲透现象→根因→修复→法则映射。</p>
+</blockquote>
+<h2>先看全局：21 篇 postmortem 的分布</h2>
+<p>demands_agent 有 21 篇结构化 postmortem（PM-001~021）。<strong>这个数字本身就是一种成熟度证据</strong>——绝大多数个人项目拿不出 5 篇像样的复盘，更别说 21 篇全部按统一模板（现象/根因/修复/Agent 指令）结构化。</p>
+<p><code>[真实产物 · 统计脱敏]</code> postmortem 按 Category × Severity 的分布：</p>
+<div class="mermaid">block-beta
+  columns 3
+  Config["Config\n2 篇\nMedium×2"] Process["Process\n15 篇\nHigh×14 / Med×1"] Data["Data\n3 篇\nHigh×3"]
+
+  style Config fill:#dbeafe,stroke:#2563eb
+  style Process fill:#fecaca,stroke:#dc2626
+  style Data fill:#fde68a,stroke:#d97706</div>
+
+<p>读这张图：<strong>Process 类占绝对多数（15/21），且 14 篇是 High severity。</strong> 这说明绝大多数事故不是技术 bug，而是&quot;流程纪律失守&quot;——AI 对 SOP 形式遵循、绕过门禁、未做事实核验。这个分布本身就是 <a href="03-可迁移法则.html">03-可迁移法则</a> 法则 10（门禁过 ≠ 交付对）的宏观证据。</p>
+<p>我从 21 篇里选了 5 篇最有讲头的——<strong>选择标准是：每篇都逼出了一条独立法则，且故事本身有普遍启示。</strong></p>
+<hr>
+<h2>复盘 1：PM-018 — Agent 对 SOP 仅作形式遵循，门禁全过但 release 不完整</h2>
+<p><strong>对应法则</strong>：<a href="03-可迁移法则.html">03-可迁移法则 › 法则 10</a> 门禁过 ≠ 交付对</p>
+<h3>现象</h3>
+<p>一个需求（<code>demands_028_0512</code>，脱敏）在多轮修订后，<code>hooks stage s4</code> 和 <code>finalize</code> <strong>全部通过</strong>。但 release 目录存在三层缺陷：</p>
+<ol>
+<li><strong>结构不对</strong>：仓库里已有成熟的分层范式（<code>release/01_ddl/</code>、<code>02_etl/</code>、<code>04_validation/</code>、<code>05_ops/</code>），但本次交付成平铺文件。</li>
+<li><strong>内容不全</strong>：对象准入矩阵明明白白写着目标对象是 <code>Hive + SR mirror</code>（意味着 DDL 要双侧齐备），但 release 目录只产出了 SR DDL，<strong>没有 Hive DDL</strong>。</li>
+<li><strong>门禁可信度失真</strong>：S4 硬门禁 + finalize 都通过了，但通过结果没有阻止&quot;结构不规范 + DDL 范围不完整&quot;的 release 被误判为可交付。</li>
+</ol>
+<h3>根因（五层，一层比一层深）</h3>
+<div class="mermaid">flowchart TD
+    R1["1. Agent 对 SOP 是'参考型'遵循<br/>先让 gate 过，再局部修正"] --> R2
+    R2["2. hooks 校'表面代理信号'<br/>文件存在 / SQL 数量 / 静态红线"] --> R3
+    R3["3. SOP 有规则但模板没固化<br/>经验够的人能做对，AI 会滑向弱实现"] --> R4
+    R4["4. 事实源之间没做'交付覆盖度对账'<br/>文档知道，交付没做到，hook 没拦"] --> R5
+    R5["5. review 偏局部修补，不是系统性 sweep<br/>修一个点，不沿约束面修一整条链"]
+
+    classDef root fill:#fee2e2,stroke:#dc2626
+    class R1,R2,R3,R4,R5 root</div>
+
+<h3>最深的洞察</h3>
+<p>这次事故最大的教训不是&quot;漏了 Hive DDL&quot;，而是<strong>重新定义了门禁的角色认知</strong>：</p>
+<blockquote>
+<p>不允许再把 <code>hooks finalize passed</code> 解释成&quot;release 质量可靠&quot;。现阶段它只能表示&quot;形式性证据和若干静态红线通过&quot;。在补齐覆盖度门禁前，必须把 hooks 定义为&quot;<strong>必要但远远不充分</strong>&quot;的校验层。</p>
+</blockquote>
+<p>这个定义从此刻进了项目章程，也成了 <a href="03-可迁移法则.html">03-可迁移法则</a> 法则 10。</p>
+<h3>修复</h3>
+<p>不只是补上那个 Hive DDL，而是系统性修复：</p>
+<ul>
+<li>把 release 目录结构从&quot;隐式习惯&quot;升级为&quot;显式规范&quot;（<code>01_ddl</code> / <code>02_etl</code> / <code>03_backfill</code> / <code>04_validation</code> / <code>05_ops</code>，不适用要交 <code>00_no_*_required.md</code>）。</li>
+<li>给 hooks 增加&quot;发布范围覆盖度&quot;hard gate：对象矩阵写明&quot;Hive + SR mirror&quot;时，S4 必须校验 release 至少存在 Hive DDL + SR DDL + Hive patch + SR sync patch。</li>
+<li>Agent 侧增加&quot;事实到产物&quot;的覆盖 sweep：宣布&quot;release 准备好&quot;前必须回答四个问题（DDL 完整？ETL 完整？目录结构符合？发布范围全落地？）。</li>
+</ul>
+<hr>
+<h2>复盘 2：PM-016 — 样例验证 SQL 被误交付为生产 merge patch</h2>
+<p><strong>对应法则</strong>：<a href="03-可迁移法则.html">03-可迁移法则 › 法则 3</a> 能力不替代权限约束；<a href="03-可迁移法则.html">03-可迁移法则 › 法则 7</a> 只看 RAW 工件</p>
+<h3>现象</h3>
+<p>一个需求的 <code>release/02_etl/01_hive_patch_*.sql</code> 文件名和注释声称是某主任务的轻量 join patch。但内容实际是一个<strong>独立样例查询</strong>：从某 dwd 表起 SELECT，只选少量字段，带样例过滤 <code>frc_order_id = &#39;O2026...样例&#39;</code>。</p>
+<p><strong>如果 DS owner 误把该 SQL 当成可合入生产任务的 patch，会导致主任务只产出样例订单或字段顺序错位。</strong> 这不是&quot;质量低&quot;，是&quot;可能引发生产事故&quot;。</p>
+<h3>根因</h3>
+<p>最关键的一条：<strong>把&quot;SQL 片段能查询出样例结果&quot;等同于&quot;可安全合入调度任务&quot;。</strong> 这两件事完全不同：</p>
+<ul>
+<li>前者是验证查询（smoke validation），属于 <code>release/04_validation/</code>。</li>
+<li>后者是生产 merge patch，必须先拉现网 SQL、核对字段顺序、声明产物类型。</li>
+</ul>
+<p>AI 把两者混在同一个 release 文件里，且没有先拉现网 SQL 核对。<strong>能力完全够，但它跳过了权限约束（&quot;patch 必须基于现网事实&quot;）。</strong></p>
+<h3>修复后的工程约束</h3>
+<p>PM-016 之后，所有名为 <code>patch</code> / <code>merge patch</code> / <code>task patch</code> 的 release SQL 必须遵守：</p>
+<div class="mermaid">flowchart LR
+    A[拉现网任务 SQL] --> B[核对字段顺序]
+    B --> C[声明产物类型]
+    C --> D{产物类型?}
+    D -->|standalone replacement| E[完整可执行 SQL]
+    D -->|merge patch snippet| F[写明插入位置+字段顺序约束+不可改的现网过滤]
+    D -->|validation SQL| G[放 04_validation，不得混入 02_etl]
+
+    style D fill:#fef3c7,stroke:#d97706</div>
+
+<hr>
+<h2>复盘 3：PM-007 — 错用 metadata lineage 导致 Nebula 血缘误判</h2>
+<p><strong>对应法则</strong>：<a href="03-可迁移法则.html">03-可迁移法则 › 法则 4</a> 先归类再修复；<a href="03-可迁移法则.html">03-可迁移法则 › 法则 6</a> 昂贵操作兑现预言</p>
+<h3>现象</h3>
+<p>我在分析里给出结论：&quot;对某张表调 metadata lineage 提示&#39;不在 lineage graph 中&#39;，目前 Nebula 侧无血缘图信息，只能黑盒使用。&quot;</p>
+<p>用户通过 Nebula 前端确认：<strong>该表在 Nebula 中确实有完整血缘</strong>（包括任务、上下游任务和 SQL）。实际上 <code>demands-agent lineage search/job/sql</code> 也能拿到完整信息，只是当时没走这条路径。</p>
+<h3>根因：把局部视图当全局事实</h3>
+<div class="mermaid">flowchart TD
+    A[用了 metadata lineage 接口<br/>本地元数据视图] --> B[这个视图里没记录]
+    B --> C[过度外推：<br/>Nebula 侧无血缘图信息]
+    C --> D[未用 lineage search/job/sql 二次确认]
+    D --> E[未对用户提供的信息做优先级处理<br/>用户说'前端能看到'是强信号]
+
+    style C fill:#fee2e2,stroke:#dc2626</div>
+
+<p>最关键的一步是 <strong>C</strong>——把&quot;某个工具视图当前查不到&quot;直接外推成&quot;Nebula 侧无血缘图信息&quot;。这是典型的<strong>把局部视图当成全局事实</strong>。</p>
+<h3>修复后的 SOP</h3>
+<p>对所有&quot;not found / empty&quot;类结论，强制交叉验证：</p>
+<ul>
+<li>至少通过<strong>第二种手段</strong>（另一条命令或用户给出的前端信息）验证后再下定论。</li>
+<li>在输出中明确限定结论范围：&quot;当前 metadata 视图中没有记录，Nebula 前端需再确认&quot;。</li>
+<li>用户已经说明&quot;前端能看到血缘&quot;时，立即视为&quot;当前假设可能错误&quot;的强信号，优先修正自己的结论。</li>
+</ul>
+<p><strong>这条修复直接进了 AGENTS.md 的 Gotchas 区</strong>——见 workspace instructions 里的 PM-021 相关条目，要求 lineage 调用出现 <code>text/html</code> 或 OA 登录页时必须先做环境核验，不得直接判断为&quot;job 不存在&quot;或&quot;接口不可用&quot;。</p>
+<hr>
+<h2>复盘 4：PM-020 — dwh-quality 知识结晶失败：内容存在但未形成知识点</h2>
+<p><strong>对应法则</strong>：<a href="03-可迁移法则.html">03-可迁移法则 › 法则 9</a> 资料 ≠ 知识点</p>
+<h3>现象</h3>
+<p>这是另一个项目（dwh-quality）的复盘，但被 demands_agent v0.7 直接吸收为前置依赖。dwh-quality 沉淀了大量资料：4 类资产文档视图（table/field、ETL task、lineage chain、owner），资产地图基础齐全。</p>
+<p><strong>结果</strong>：内容沉淀了，但没有形成可被 agent 在新需求中直接引用的知识点。agent 在做新需求时，仍然像没看过这些资料一样从头查 schema / lineage。业主自述：&quot;没有形成有效的知识点。&quot;</p>
+<h3>根因：单一根因，不是五个</h3>
+<p>PM-020 最精彩的部分是它<strong>排除了五个表象归因</strong>，收敛到单一根因：</p>
+<table>
+<thead>
+<tr>
+<th>表象归因</th>
+<th>为什么不是根因</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>范围太大</td>
+<td>第一期已只覆盖一条业务线</td>
+</tr>
+<tr>
+<td>没人消费</td>
+<td>owner 真的 review 过</td>
+</tr>
+<tr>
+<td>过期</td>
+<td>资产刚生成时也用不上，与过期无关</td>
+</tr>
+<tr>
+<td>缺 governance</td>
+<td>已经写了 evidence/rule/impact 三件套</td>
+</tr>
+</tbody></table>
+<p><strong>真正的根因</strong>：</p>
+<blockquote>
+<p>&quot;资料&quot;和&quot;知识点&quot;不是同一种东西。dwh-quality 沉淀的是<strong>资料</strong>（描述&quot;是什么&quot;），不回答&quot;我下一步应该做什么&quot;。agent 拿到资料后没法据此改变任何决策，所以等于没有。</p>
+</blockquote>
+<h3>形式化定义（直接进了 v0.7 schema）</h3>
+<pre><code class="language-text">资料 (information) := 描述事实的文本块
+知识点 (knowledge point) := 一个能让 agent 在特定触发条件下做出不同决策的最小单元
+</code></pre>
+<p>一个 effective knowledge point 必须<strong>同时</strong>满足五个条件（5 条任一缺失 = 不算知识点）：</p>
+<ol>
+<li><strong>触发条件 (trigger)</strong>：明确&quot;什么时候应该召回我&quot;。</li>
+<li><strong>决策影响 (decision delta)</strong>：能让 agent 做出与不知道时<strong>不同</strong>的动作。</li>
+<li><strong>可被引用 (citable)</strong>：有稳定 ID，能在 analysis.md 里以引文形态出现。</li>
+<li><strong>可被证伪 (refutable)</strong>：有明确的&quot;如果发生 X 则此知识失效&quot;的边界。</li>
+<li><strong>有来源 (provenance)</strong>：evidence id / postmortem id / 业务方签字 / commit hash 之一。</li>
+</ol>
+<p>这五个条件成了 demands_agent v0.7 FKC schema 的硬约束——memory entry 缺任一字段，ingestion 直接拒绝。</p>
+<hr>
+<h2>复盘 5：PM-010/011 — 历史回灌反复试错（双 PM 合并讲）</h2>
+<p><strong>对应法则</strong>：<a href="03-可迁移法则.html">03-可迁移法则 › 法则 5</a> 循环检测器；<a href="03-可迁移法则.html">03-可迁移法则 › 法则 6</a> 昂贵操作兑现预言</p>
+<h3>现象</h3>
+<p>PM-010（历史回灌未先核验源数据可回放性）和 PM-011（SQL 执行路径未收敛）是一对孪生事故。历史回灌任务反复在&quot;试试这条路径→失败→换一条→又失败&quot;里打转。每次都在&quot;修东西&quot;，体感上像在推进，<strong>实际在原地打转</strong>。</p>
+<h3>根因：没有循环检测器</h3>
+<p>这两篇 PM 逼出了 <a href="03-可迁移法则.html">03-可迁移法则</a> 法则 5 的循环检测器四问：</p>
+<div class="mermaid">flowchart TD
+    Q1{边界推进了吗?} -->|否| LOOP[打转，停下来]
+    Q1 -->|是| Q2{新问题可归类吗?}
+    Q2 -->|否| LOOP
+    Q2 -->|是| Q3{已修问题复发了吗?}
+    Q3 -->|是| LOOP
+    Q3 -->|否| Q4{剩余阻断是<br/>等人还是等工程?}
+    Q4 -->|说不清| LOOP
+    Q4 -->|清楚| DIG[掘进，继续]
+
+    style LOOP fill:#fee2e2,stroke:#dc2626
+    style DIG fill:#dcfce7,stroke:#16a34a</div>
+
+<p><strong>四问全过才是掘进。</strong> 这套检测器治好了至少两次&quot;走不出来&quot;的焦虑——那两次数据都显示我在掘进，只是体感上像打转。</p>
+<h3>修复</h3>
+<p>不只是收敛 SQL 执行路径，而是把&quot;先 dry-run + 写预期 + 再 fresh run&quot;写进回灌 SOP：</p>
+<ul>
+<li>任何回灌之前，先核验源数据可回放性。</li>
+<li>先 staged dry-run，预期全绿，才 fresh rerun。</li>
+<li>跑完对账，对不上的偏差就是下一个 issue 的全部内容。</li>
+</ul>
+<hr>
+<h2>这 5 篇复盘的共同模式</h2>
+<p>5 篇看似不同，但根因都指向同一个东西：<strong>AI 在&quot;形式合规&quot;的掩护下跳过了&quot;事实核验&quot;。</strong></p>
+<div class="mermaid">mindmap
+  root((共同根因))
+    PM-018 形式遵循 SOP，不校覆盖闭环
+    PM-016 样例当生产，跳过现网核对
+    PM-007 局部视图当全局事实，不交叉验证
+    PM-020 沉淀资料不沉淀知识点，不改变决策
+    PM-010/011 试错不写预期，打转不自知</div>
+
+<p>这就是为什么 demands_agent 的整个设计——evidence 绑定、门禁、runtime 真相、PEG fail-closed——本质都是同一件事的不同切面：<strong>把&quot;形式合规&quot;和&quot;事实核验&quot;在工程上彻底分开，让前者无法冒充后者。</strong></p>
+<hr>
+<h2>21 篇 PM 的完整清单</h2>
+<p>为完整性，这里列出全部 21 篇（标题已脱敏，不含业务细节）：</p>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>主题（脱敏）</th>
+<th>Category</th>
+<th>Severity</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>PM-001</td>
+<td>技能路径不一致导致检索偏差</td>
+<td>Config</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>PM-002</td>
+<td>需求处理绕过 SOP</td>
+<td>Process</td>
+<td>High</td>
+</tr>
+<tr>
+<td>PM-003</td>
+<td>未做字段核验直接猜测并交付</td>
+<td>Data</td>
+<td>High</td>
+</tr>
+<tr>
+<td>PM-004</td>
+<td>SOP 阶段后未验证且 Hook 未闭环</td>
+<td>Process</td>
+<td>High</td>
+</tr>
+<tr>
+<td>PM-005</td>
+<td>排除逻辑缺失导致排查偏差</td>
+<td>Data</td>
+<td>High</td>
+</tr>
+<tr>
+<td>PM-006</td>
+<td>已有记忆知识未用于在线诊断</td>
+<td>Process</td>
+<td>High</td>
+</tr>
+<tr>
+<td>PM-007</td>
+<td>错用 metadata lineage 导致血缘误判</td>
+<td>Process</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>PM-008</td>
+<td>回溯表语义误判 + 缺乏事实核查</td>
+<td>Data</td>
+<td>High</td>
+</tr>
+<tr>
+<td>PM-009</td>
+<td>SR 发布范围未做对象存在性核查</td>
+<td>Process</td>
+<td>High</td>
+</tr>
+<tr>
+<td>PM-010</td>
+<td>历史回灌未先核验源数据可回放性</td>
+<td>Process</td>
+<td>High</td>
+</tr>
+<tr>
+<td>PM-011</td>
+<td>SQL 执行路径未收敛导致反复试错</td>
+<td>Process</td>
+<td>High</td>
+</tr>
+<tr>
+<td>PM-012</td>
+<td>未核验对象类型导致依赖表不存在</td>
+<td>Process</td>
+<td>High</td>
+</tr>
+<tr>
+<td>PM-013</td>
+<td>离线与实时边界混淆</td>
+<td>Process</td>
+<td>High</td>
+</tr>
+<tr>
+<td>PM-014</td>
+<td>DS 调度脚本 SQL 字面量兼容性未核验</td>
+<td>Process</td>
+<td>High</td>
+</tr>
+<tr>
+<td>PM-015</td>
+<td>下线表未做在线状态核验</td>
+<td>Process</td>
+<td>High</td>
+</tr>
+<tr>
+<td>PM-016</td>
+<td>样例验证 SQL 误交付为生产 patch</td>
+<td>Process</td>
+<td>High</td>
+</tr>
+<tr>
+<td>PM-017</td>
+<td>需求分析阶段事实约束失守</td>
+<td>Process</td>
+<td>High</td>
+</tr>
+<tr>
+<td>PM-018</td>
+<td>Agent 对 SOP 仅作形式遵循</td>
+<td>Process</td>
+<td>High</td>
+</tr>
+<tr>
+<td>PM-020</td>
+<td>dwh-quality 知识结晶失败</td>
+<td>Process</td>
+<td>High</td>
+</tr>
+<tr>
+<td>PM-021</td>
+<td>lineage 环境漂移导致 API 返回 HTML</td>
+<td>Config</td>
+<td>Medium</td>
+</tr>
+</tbody></table>
+<p>（PM-019 跳号是项目内的编号留白，不是遗漏。）</p>
+<p><strong>这 21 篇 PM 是 demands_agent 最硬的成熟度证据。</strong> 它们证明这个项目不是在 happy path 上跑出来的 demo——每一个 gate、每一条契约、每一层边界，背后都有一次真实事故。</p>
+<hr>
+<p>上一篇：<a href="03-可迁移法则.html">03-可迁移法则</a> ｜ 下一篇：<a href="05-演进史.html">05-演进史</a></p>
+
+<div class="nav"><a href="03-可迁移法则.html">← 上一篇：03-可迁移法则</a><a href="05-演进史.html">下一篇：05-演进史 →</a></div>
+</div>
+</body>
+</html>

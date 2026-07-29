@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>06 · 收获与边界 — 诚实的总结</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>document.addEventListener("DOMContentLoaded",()=>{
+  mermaid.initialize({startOnLoad:true,theme:"neutral",securityLevel:"loose"});
+  // lightbox：点击 mermaid 块 → 全屏放大；点遮罩关闭；ESC 关闭
+  // 关键：mermaid 渲染后会把 .mermaid 里的文本替换成 svg，所以点击时
+  // 要在 lightbox 里重建一个 .mermaid div 放原始文本，再调用 mermaid.run() 重新渲染
+  const lb=document.createElement("div");lb.className="lightbox";document.body.appendChild(lb);
+  // 保存每张图的原始 mermaid 代码（渲染前抓取）
+  const sources=new Map();
+  document.querySelectorAll(".mermaid").forEach((m,i)=>{
+    sources.set(i,m.textContent);m.dataset.src=i;
+  });
+  document.querySelectorAll(".mermaid").forEach((m,i)=>{
+    m.addEventListener("click",async()=>{
+      const srcId=m.dataset.src;
+      const code=sources.get(Number(srcId));
+      const holder=document.createElement("div");
+      holder.className="mermaid-holder";
+      lb.innerHTML="";lb.appendChild(holder);lb.classList.add("open");
+      // 用 mermaid.render 拿 svg 字符串（不依赖 .mermaid class，避免 run() 的 class 识别问题）
+      try{
+        const {svg}=await mermaid.render("lb"+Date.now(),code);
+        holder.innerHTML=svg;
+        const s=holder.querySelector("svg");
+        // 从 viewBox 解析原始内容尺寸，强制设为绝对像素（覆盖 mermaid 的 width:100%/max-width 限制）
+        const vb=(s.getAttribute("viewBox")||"").split(" ");
+        const w=parseFloat(vb[2]),h=parseFloat(vb[3]);
+        if(w&&h){s.removeAttribute("style");s.setAttribute("width",w);s.setAttribute("height",h);}
+      }catch(e){console.error("lightbox render failed",e);holder.textContent="渲染失败: "+e.message}
+    });
+  });
+  lb.addEventListener("click",()=>lb.classList.remove("open"));
+  document.addEventListener("keydown",e=>{if(e.key==="Escape")lb.classList.remove("open")});
+})</script>
+<style>
+:root {
+  --bg:#fafaf7; --card:#ffffff; --ink:#1f2328; --muted:#57606a;
+  --accent:#b45309; --accent-soft:#fef3c7; --rule:#e5e3dd;
+  --code-bg:#f6f3ee; --border:#d6d3c7;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:2.5rem 1rem 4rem;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,"PingFang SC","Noto Sans CJK SC","Helvetica Neue",sans-serif;
+  line-height:1.75;font-size:16px}
+.wrap{max-width:820px;margin:0 auto}
+header.essay{text-align:center;margin-bottom:2.5rem;padding-bottom:1.5rem;border-bottom:1px solid var(--rule)}
+header.essay .eyebrow{font-size:.8rem;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);font-weight:600}
+header.essay h1{font-size:2rem;margin:.5rem 0;letter-spacing:-.01em}
+header.essay .sub{color:var(--muted);font-size:.95rem}
+h1{font-size:1.8rem;margin:2rem 0 .8rem;padding-bottom:.4rem;border-bottom:2px solid var(--accent);display:inline-block}
+h2{font-size:1.4rem;margin:2.5rem 0 .8rem;padding-bottom:.4rem;border-bottom:1px solid var(--rule)}
+h3{font-size:1.15rem;margin:1.8rem 0 .5rem}
+h4{font-size:1rem;margin:1.2rem 0 .4rem;color:var(--accent)}
+p{margin:.6rem 0}
+strong{color:var(--ink)} em{color:var(--accent);font-style:normal;font-weight:600}
+blockquote{margin:1.2rem 0;padding:.9rem 1.2rem;background:var(--accent-soft);
+  border-left:4px solid var(--accent);border-radius:0 6px 6px 0;color:#78350f}
+blockquote p{margin:.3rem 0}
+ul,ol{padding-left:1.4rem} li{margin:.3rem 0}
+code{background:var(--code-bg);padding:.1rem .4rem;border-radius:3px;
+  font-family:"SF Mono","JetBrains Mono",Consolas,monospace;font-size:.88em;color:#92400e}
+pre{background:#1f2328;color:#e6edf3;padding:1rem 1.2rem;border-radius:8px;
+  overflow-x:auto;font-size:.85rem;line-height:1.5}
+pre code{background:none;color:inherit;padding:0}
+table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.9rem}
+th,td{border:1px solid var(--border);padding:.6rem .8rem;text-align:left;vertical-align:top}
+th{background:var(--code-bg);font-weight:600}
+tr:nth-child(even) td{background:#fcfbf7}
+.mermaid{margin:1.5rem 0;text-align:center;background:var(--card);
+  padding:1rem;border-radius:8px;border:1px solid var(--rule);
+  cursor:zoom-in;position:relative;transition:box-shadow .15s}
+.mermaid:hover{box-shadow:0 0 0 2px var(--accent)}
+.mermaid::after{content:"点击放大";position:absolute;top:.4rem;right:.6rem;
+  font-size:.7rem;color:var(--muted);opacity:.7}
+/* lightbox：点击 mermaid 后的全屏遮罩 */
+.lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);
+  z-index:9999;overflow:auto;padding:2rem;cursor:zoom-out}
+.lightbox.open{display:flex;align-items:center;justify-content:center}
+.lightbox .mermaid-holder{background:var(--card);border-radius:8px;padding:1.5rem;
+  display:inline-block;cursor:default}
+.nav{display:flex;justify-content:space-between;margin:3rem 0 0;padding:1.2rem 0 0;
+  border-top:1px solid var(--rule);font-size:.9rem}
+.nav a{color:var(--accent);text-decoration:none}
+.nav a:hover{text-decoration:underline}
+hr{border:none;border-top:1px solid var(--rule);margin:2rem 0}
+a{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="essay">
+<div class="eyebrow">第 06 篇</div>
+<h1>06 · 收获与边界 — 诚实的总结</h1>
+<div class="sub">为什么读这篇：前面五篇都在讲"做成了什么"，这篇讲"学到了什么"和"没做好什么"。</div>
+</header>
+<blockquote>
+<p>为什么读这篇：前面五篇都在讲&quot;做成了什么&quot;，这篇讲&quot;学到了什么&quot;和&quot;没做好什么&quot;。
+读完带走：三个最值钱的收获 + 五个明确的局限 + 下一步方向。</p>
+</blockquote>
+<h2>三个最值钱的收获</h2>
+<h3>收获 1：把&quot;治理&quot;当成产品来做，而不是当成开销</h3>
+<p>做这个项目之前，我以为门禁、契约、evidence、postmortem 这些是&quot;为了交付质量不得不做的事&quot;——是开销。做完之后我的认知彻底反转：<strong>治理本身就是产品。</strong></p>
+<p>证据是：这个项目最能拿出来说的东西，没有一个是&quot;功能&quot;——</p>
+<ul>
+<li>21 篇 postmortem 是治理产物，不是功能。</li>
+<li>S0–S4 门禁是治理结构，不是功能。</li>
+<li>Evidence v0.6 / FKC 分层 / PEG 是治理机制，不是功能。</li>
+<li><a href="03-可迁移法则.html">03-可迁移法则</a> 那 10 条是治理经验，不是功能。</li>
+</ul>
+<p><strong>一个 Agent 项目的护城河不在能力面（能力会被模型碾压），在治理面和运行态面。</strong> 这是我做这个项目最大的认知转变。简历上如果只能写一句话，我会写这句。</p>
+<h3>收获 2：组织项目的方式本身就是产品的同构物</h3>
+<p>这条是 <a href="03-可迁移法则.html">03-可迁移法则</a> 法则 7 的延伸，也是我个人最珍惜的洞察。</p>
+<p>我发现我在用治理 Agent 的方法治理&quot;开发 Agent 的过程&quot;：</p>
+<ul>
+<li>builder / executor / monitor / 外部 reviewer 的角色分离，对应 Agent 的 actor contract。</li>
+<li>拿 evidence 包来评审，对应 Agent 的&quot;只看 RAW 工件&quot;。</li>
+<li>把裁定写回 contract，对应 Agent 的&quot;决策写回契约&quot;。</li>
+<li>postmortem 沉淀成 gate，对应 Agent 的&quot;学习变成 required check&quot;。</li>
+</ul>
+<p><strong>这不是巧合——因为治理一个会犯错的 AI 和治理一个会犯错的开发流程，本质是同一个问题：怎么把不可信的执行约束成可验证的交付。</strong> 这个元技能比任何单条代码都值钱，而且它可以迁移到任何 Agent 项目之外的场景（团队管理、流程设计、系统架构）。</p>
+<h3>收获 3：诚实是最大的成熟度信号</h3>
+<p>这个项目里有几处&quot;主动声明自己没完成&quot;的地方：</p>
+<ul>
+<li>v1.0-rc.1 release notes 第一句：&quot;It is <strong>not GA</strong> and does <strong>not</strong> mean production deployment is complete.&quot;</li>
+<li>PM-018 之后把 hooks 定义为&quot;必要但远远不充分&quot;。</li>
+<li>capability map 里每个能力都标了诚实成熟度（🟢/🟡/🔵），不回避缺口。</li>
+<li>finalize gate 即使全过，也明确不等于&quot;release 质量可靠&quot;。</li>
+</ul>
+<p><strong>这种诚实不是谦虚，是工程纪律。</strong> 一个会主动声明自己边界的系统，比一个声称&quot;全链路自动化、零人工干预&quot;的系统可信得多。因为前者你能预测它在哪里会失败，后者你不知道它在哪里撒谎。</p>
+<h2>五个明确的局限</h2>
+<p>我不想把这个项目包装成银弹。它有五个明确的局限，每个我都承认：</p>
+<h3>局限 1：压不住&quot;语义级漏项&quot;</h3>
+<p>PM-018 那种&quot;Hive + SR mirror 但只交了 SR DDL&quot;，需要 release scope coverage gate 配合人工对账。目前是&quot;必要不充分&quot;——机器能对账&quot;发布范围写明的对象&quot;，但对不了&quot;业务语义上是否完整&quot;。</p>
+<p><strong>这意味着什么</strong>：finalize gate 全过，仍不能替代人工复核。AI 能做到&quot;形式上没漏&quot;，做不到&quot;语义上完整&quot;。</p>
+<h3>局限 2：Typed routing 还年轻</h3>
+<p>三种需求类型（standard / complex / diagnostic）的 gate 解释已经分叉，但 evidence 模型还没完全按类型分化。也就是说，一个 diagnostic 类型的需求，目前走的 evidence 模型和 standard 类型差别不够大。</p>
+<p><strong>这意味着什么</strong>：简单需求和复杂需求目前共享太多逻辑，复杂需求没有得到应有的专门对待。</p>
+<h3>局限 3：产品化未完成</h3>
+<p>这套工程内核很强，但外壳还不够&quot;给非工程师用&quot;：</p>
+<ul>
+<li>IM review 多轮、writeback 是 MVP。</li>
+<li>Dashboard 是 MVP，issue lifecycle 闭环未完成。</li>
+<li>用户可见文案需要产品化打磨。</li>
+</ul>
+<p><strong>这意味着什么</strong>：目前这个系统主要还是给&quot;懂工程的数据开发者&quot;用，不是给业务方用。</p>
+<h3>局限 4：线上操作永远归开发者</h3>
+<p>agent 只拥有 release package；线上调度修改、执行、验收是开发者的责任。</p>
+<p><strong>这不是待补的缺口，是有意的边界</strong>——但对外宣讲时容易被误解为&quot;做不到全自动化&quot;。实际上这是 <a href="07-什么是Agent与研究笔记.html">07-什么是Agent与研究笔记</a> 要素 4 的落地：高风险动作必须 approval-gated，agent 不静默执行线上变更。</p>
+<h3>局限 5：场景依赖性强</h3>
+<p><a href="03-可迁移法则.html">03-可迁移法则</a> 那 10 条法则有一个共同前提：<strong>场景容不容得下&quot;形式合规地撒谎&quot;。</strong> 如果场景是 demo、是 happy path、是容错率极高的玩具，这套治理就是过度工程。</p>
+<p><strong>这意味着什么</strong>：这套设计不能照搬到所有 Agent 项目。它只在交付出错有真实代价的工业现场才成立。</p>
+<h2>下一步方向</h2>
+<p>基于 gaps-and-roadmap 和我对项目的判断，下一步的重点是：</p>
+<div class="mermaid">mindmap
+  root((下一步))
+    语义级闭环
+      release scope coverage gate 强化
+      人工对账工具化
+    typed routing 成熟
+      evidence 模型按类型分化
+      complex 类型专门对待
+    产品化
+      IM 多轮 + writeback
+      Dashboard issue lifecycle
+      文案产品化
+    治理自动化
+      postmortem → gate 自动转化
+      knowledge → required check</div>
+
+<p>其中我最想推进的是&quot;<strong>postmortem → gate 的自动转化</strong>&quot;——目前 21 篇 PM 沉淀成了法则和文档，但只有一部分转化成了强制 gate。如果能让&quot;每篇 high severity PM 自动产出一个 regression test 或 gate&quot;，这个项目的治理闭环才算真正合上。</p>
+<h2>如果重新做一次，会改变什么</h2>
+<p>诚实地说，有三个地方如果重做会调整：</p>
+<ol>
+<li><p><strong>更早引入 runtime spine</strong>。runtime（run_id / timeline / checkpoint）是 v0.9 才有的，但前期的很多事故（PM-003 的&quot;叙述冒充证据&quot;、PM-008 的&quot;中间状态被篡改&quot;）如果有 runtime 会更容易发现。如果重来，runtime 会从 v0.1 就埋进去。</p>
+</li>
+<li><p><strong>分类系统从第一天就封闭起步</strong>。早期 <code>finding_kind</code> / <code>check_type</code> 这些字段经历了&quot;随便填 → 杂物抽屉 → 推翻重来 → 封闭起步&quot;的弯路。如果重来，<a href="03-可迁移法则.html">03-可迁移法则</a> 法则 8 从第一天就执行。</p>
+</li>
+<li><p><strong>把&quot;门禁过 ≠ 交付对&quot;的认知前置</strong>。PM-018 的教训来得太晚——在那之前我对 hooks finalize 的信任度过高。如果重来，门禁从第一天就被定义为&quot;必要不充分&quot;，会少走很多弯路。</p>
+</li>
+</ol>
+<h2>一句话总结整个案例集</h2>
+<p>如果要把这七篇压成一句：</p>
+<blockquote>
+<p><strong>demands_agent 不是&quot;让 AI 更能干&quot;的项目，是&quot;让 AI 的不可信变得可验证、可拦截、可恢复&quot;的项目。它的产出不是代码，是一套把不可信约束成可交付的工程纪律——而这套纪律，比任何单条代码都更值得迁移到下一个 Agent 项目。</strong></p>
+</blockquote>
+<hr>
+<p>上一篇：<a href="05-演进史.html">05-演进史</a> ｜ 下一篇：<a href="07-什么是Agent与研究笔记.html">07-什么是Agent与研究笔记</a></p>
+
+<div class="nav"><a href="05-演进史.html">← 上一篇：05-演进史</a><a href="07-什么是Agent与研究笔记.html">下一篇：07-什么是Agent与研究笔记 →</a></div>
+</div>
+</body>
+</html>

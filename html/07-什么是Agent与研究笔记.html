@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>07 · 什么是 Agent — 从 demands_agent 反推出的设计要素与工业鲁棒性</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>document.addEventListener("DOMContentLoaded",()=>{
+  mermaid.initialize({startOnLoad:true,theme:"neutral",securityLevel:"loose"});
+  // lightbox：点击 mermaid 块 → 全屏放大；点遮罩关闭；ESC 关闭
+  // 关键：mermaid 渲染后会把 .mermaid 里的文本替换成 svg，所以点击时
+  // 要在 lightbox 里重建一个 .mermaid div 放原始文本，再调用 mermaid.run() 重新渲染
+  const lb=document.createElement("div");lb.className="lightbox";document.body.appendChild(lb);
+  // 保存每张图的原始 mermaid 代码（渲染前抓取）
+  const sources=new Map();
+  document.querySelectorAll(".mermaid").forEach((m,i)=>{
+    sources.set(i,m.textContent);m.dataset.src=i;
+  });
+  document.querySelectorAll(".mermaid").forEach((m,i)=>{
+    m.addEventListener("click",async()=>{
+      const srcId=m.dataset.src;
+      const code=sources.get(Number(srcId));
+      const holder=document.createElement("div");
+      holder.className="mermaid-holder";
+      lb.innerHTML="";lb.appendChild(holder);lb.classList.add("open");
+      // 用 mermaid.render 拿 svg 字符串（不依赖 .mermaid class，避免 run() 的 class 识别问题）
+      try{
+        const {svg}=await mermaid.render("lb"+Date.now(),code);
+        holder.innerHTML=svg;
+        const s=holder.querySelector("svg");
+        // 从 viewBox 解析原始内容尺寸，强制设为绝对像素（覆盖 mermaid 的 width:100%/max-width 限制）
+        const vb=(s.getAttribute("viewBox")||"").split(" ");
+        const w=parseFloat(vb[2]),h=parseFloat(vb[3]);
+        if(w&&h){s.removeAttribute("style");s.setAttribute("width",w);s.setAttribute("height",h);}
+      }catch(e){console.error("lightbox render failed",e);holder.textContent="渲染失败: "+e.message}
+    });
+  });
+  lb.addEventListener("click",()=>lb.classList.remove("open"));
+  document.addEventListener("keydown",e=>{if(e.key==="Escape")lb.classList.remove("open")});
+})</script>
+<style>
+:root {
+  --bg:#fafaf7; --card:#ffffff; --ink:#1f2328; --muted:#57606a;
+  --accent:#b45309; --accent-soft:#fef3c7; --rule:#e5e3dd;
+  --code-bg:#f6f3ee; --border:#d6d3c7;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:2.5rem 1rem 4rem;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,"PingFang SC","Noto Sans CJK SC","Helvetica Neue",sans-serif;
+  line-height:1.75;font-size:16px}
+.wrap{max-width:820px;margin:0 auto}
+header.essay{text-align:center;margin-bottom:2.5rem;padding-bottom:1.5rem;border-bottom:1px solid var(--rule)}
+header.essay .eyebrow{font-size:.8rem;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);font-weight:600}
+header.essay h1{font-size:2rem;margin:.5rem 0;letter-spacing:-.01em}
+header.essay .sub{color:var(--muted);font-size:.95rem}
+h1{font-size:1.8rem;margin:2rem 0 .8rem;padding-bottom:.4rem;border-bottom:2px solid var(--accent);display:inline-block}
+h2{font-size:1.4rem;margin:2.5rem 0 .8rem;padding-bottom:.4rem;border-bottom:1px solid var(--rule)}
+h3{font-size:1.15rem;margin:1.8rem 0 .5rem}
+h4{font-size:1rem;margin:1.2rem 0 .4rem;color:var(--accent)}
+p{margin:.6rem 0}
+strong{color:var(--ink)} em{color:var(--accent);font-style:normal;font-weight:600}
+blockquote{margin:1.2rem 0;padding:.9rem 1.2rem;background:var(--accent-soft);
+  border-left:4px solid var(--accent);border-radius:0 6px 6px 0;color:#78350f}
+blockquote p{margin:.3rem 0}
+ul,ol{padding-left:1.4rem} li{margin:.3rem 0}
+code{background:var(--code-bg);padding:.1rem .4rem;border-radius:3px;
+  font-family:"SF Mono","JetBrains Mono",Consolas,monospace;font-size:.88em;color:#92400e}
+pre{background:#1f2328;color:#e6edf3;padding:1rem 1.2rem;border-radius:8px;
+  overflow-x:auto;font-size:.85rem;line-height:1.5}
+pre code{background:none;color:inherit;padding:0}
+table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.9rem}
+th,td{border:1px solid var(--border);padding:.6rem .8rem;text-align:left;vertical-align:top}
+th{background:var(--code-bg);font-weight:600}
+tr:nth-child(even) td{background:#fcfbf7}
+.mermaid{margin:1.5rem 0;text-align:center;background:var(--card);
+  padding:1rem;border-radius:8px;border:1px solid var(--rule);
+  cursor:zoom-in;position:relative;transition:box-shadow .15s}
+.mermaid:hover{box-shadow:0 0 0 2px var(--accent)}
+.mermaid::after{content:"点击放大";position:absolute;top:.4rem;right:.6rem;
+  font-size:.7rem;color:var(--muted);opacity:.7}
+/* lightbox：点击 mermaid 后的全屏遮罩 */
+.lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);
+  z-index:9999;overflow:auto;padding:2rem;cursor:zoom-out}
+.lightbox.open{display:flex;align-items:center;justify-content:center}
+.lightbox .mermaid-holder{background:var(--card);border-radius:8px;padding:1.5rem;
+  display:inline-block;cursor:default}
+.nav{display:flex;justify-content:space-between;margin:3rem 0 0;padding:1.2rem 0 0;
+  border-top:1px solid var(--rule);font-size:.9rem}
+.nav a{color:var(--accent);text-decoration:none}
+.nav a:hover{text-decoration:underline}
+hr{border:none;border-top:1px solid var(--rule);margin:2rem 0}
+a{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="essay">
+<div class="eyebrow">第 07 篇</div>
+<h1>07 · 什么是 Agent — 从 demands_agent 反推出的设计要素与工业鲁棒性</h1>
+<div class="sub">为什么读这篇：前面六篇都在讲"这个项目做了什么"。这篇退一步，讲"从做这个项目里，我反推出的 Agent 到底是什么、设计上必须有哪些要素、怎么让长程任务在工业现场跑得稳"。</div>
+</header>
+<blockquote>
+<p>为什么读这篇：前面六篇都在讲&quot;这个项目做了什么&quot;。这篇退一步，讲&quot;从做这个项目里，我反推出的 Agent 到底是什么、设计上必须有哪些要素、怎么让长程任务在工业现场跑得稳&quot;。
+读完带走：一个可证伪的 Agent 定义 + 六个不可妥协的设计要素 + 长程任务工业鲁棒性的五条具体机制。
+文风对标 <code>AIx/agents/研究/</code>：研究型长文，有判断、有引用、最后落到工程原则。</p>
+</blockquote>
+<h2>执行摘要</h2>
+<p>做完 demands_agent 之后，我对&quot;什么是 Agent&quot;的定义收窄了。<strong>一个真正的 Agent 不是更长的 prompt、不是一组脚本、也不是一个 IM bot——它是一个由 runtime 控制的任务交付系统：能把一个任务带过规划、执行、验证、恢复、学习，同时保留证据、决策归属和可恢复状态。</strong></p>
+<p>这个定义不是我拍脑袋想的，是被 21 篇 postmortem 一篇一篇逼出来的。最早我以为&quot;Agent = LLM + 工具调用&quot;，后来被&quot;AI 在交付里形式合规地撒谎&quot;打脸（PM-003）；加上&quot;门禁形式通过但语义漏项&quot;（PM-018）、&quot;AI 越权裁决业务语义&quot;（PM-010）、&quot;raw data 溜进云端&quot;（数据边界事故）这几次之后，我才意识到：<strong>会想、会写、会调用工具，只是 Agent 的&quot;能力面&quot;；真正让一个 Agent 能在工业现场上岗的，是它的&quot;治理面&quot;和&quot;运行态面&quot;。</strong></p>
+<p>本文把这三面拆成六个不可妥协的设计要素，再用 demands_agent 的真实机制回答一个核心问题：<strong>怎么让一个长程任务（跨多次工具调用、跨人工审批、跨中断恢复）在工业现场可重跑、可断点、可审计。</strong></p>
+<p>文中的每一条机制都对应 demands_agent 里的真实产物或代码契约，不是泛泛而谈。</p>
+<hr>
+<h2>一、什么是 Agent — 一个可证伪的定义</h2>
+<p>市面上对 Agent 的定义太宽。负责任的 AI 翻译软件把 agent 译成&quot;特工&quot;，这有点黑色幽默：正是这个被鄙视的翻译，安慰了正在担心被 AI 替代的打工人。但真正发生替代的地方，从来不是&quot;机器取代人力&quot;，而是&quot;人力转移到更适应新时代的位置&quot;。所以不要着急去定义一个永恒的 Agent——现在的 Agent 从历史看，很可能只是那辆初代跑不过马车的蒸汽机车。</p>
+<p>但在工程现场，我需要一个<strong>可证伪</strong>的定义来指导设计。我落到的是这五个属性，它们全部能在 demands_agent 里被证伪——缺任何一条，我就不承认那是一个 Agent，只是一个&quot;会调用工具的 LLM 包装&quot;：</p>
+<table>
+<thead>
+<tr>
+<th>属性</th>
+<th>含义</th>
+<th>缺了会怎样</th>
+<th>demands_agent 里的证据</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Grounded（有依据）</strong></td>
+<td>关键事实必须引用 evidence / memory / schema / lineage / test / 签字 alignment，不能只靠叙述信心</td>
+<td>AI 在分析里写&quot;已验证&quot;但根本没查 → PM-003</td>
+<td>S0–S4 gate 持久化状态；release scope 从签字产物派生 hash</td>
+</tr>
+<tr>
+<td><strong>Runtime-bound（绑定运行态）</strong></td>
+<td>工作必须绑定 run id、timeline、checkpoint、approval、side-effect records</td>
+<td>&quot;我以为跑过了&quot;无法证伪</td>
+<td>每个 demand 绑定 <code>runs/&lt;run_id&gt;/</code>，含 run.yaml / timeline.jsonl / checkpoint.json</td>
+</tr>
+<tr>
+<td><strong>Boundary-aware（理解边界）</strong></td>
+<td>raw data / credential / 敏感 rowset 不能静默进入云端模型 context</td>
+<td>一次 raw rowset 上云 = 一次数据安全事件</td>
+<td>Private Execution Gateway 在 cloud payload 上 fail-closed</td>
+</tr>
+<tr>
+<td><strong>Recoverable（可恢复）</strong></td>
+<td>中断或带副作用的工作必须有 checkpoint 和 manual resume 语义</td>
+<td>长任务一断就废，只能从头来</td>
+<td>checkpoint hash + timeline tail 校验；blocked / resume 状态机</td>
+</tr>
+<tr>
+<td><strong>Governed learning（可治理学习）</strong></td>
+<td>memory 可以影响 route / risk / required checks，但 fact / knowledge / cognition / constraint 必须分层</td>
+<td>学习变成&quot;记忆污染决策&quot;，越用越歪</td>
+<td>FKC schema 分离 FactRecord / KnowledgeEntry / CognitionPolicy</td>
+</tr>
+</tbody></table>
+<p><strong>这个定义的判别力在于：它能区分&quot;Agent&quot;和&quot;会调用工具的 LLM&quot;。</strong> 后者只有能力面，前三条属性基本不满足。一个没有 runtime 绑定、没有 evidence 绑定、没有边界意识的系统，哪怕能调一百个工具，也不是 Agent——它是一个&quot;会花式撒谎的 LLM 包装&quot;。</p>
+<p>由此得出一条我反复验证过的推论：<strong>判断一个系统是不是 Agent，不要看它的能力清单，看它失败的时候有没有留下可审计的痕迹、能不能从断点恢复、越权的时候有没有被拦。</strong> 能力是 commodity，治理和运行态才是分水岭。</p>
+<hr>
+<h2>二、Agent 设计的六个不可妥协要素</h2>
+<p>我把上面五个属性展开成六个设计要素。这六个要素是我做 demands_agent 时&quot;补&quot;出来的——每一条背后都站着至少一篇 postmortem。</p>
+<h3>要素 1：能力面 ≠ 治理面，必须分层</h3>
+<p><strong>最常见的错误是把&quot;能力&quot;当成&quot;Agent 本身&quot;。</strong> 一个能写 SQL、能查 DB、能调 lineage API 的 LLM，只是有了能力面。真正让它成为 Agent 的，是套在外面那层治理结构。</p>
+<p>demands_agent 的分层是：</p>
+<pre><code class="language-text">Core runtime        run id / timeline / checkpoint / approval / actor contract
+                    （不依赖任何具体客户端存在）
+Client adapters     IM adapter / review bot / bridge / 工单 intake
+                    （是客户端，不拥有状态真相）
+Data exec boundary  DB 执行策略 / raw result 留存 / local-private 路由 / cloud 校验
+Artifact &amp; gate     S0-S4 artifacts / release scope / release manifest / hook status
+Memory &amp; constraint Fact / Knowledge / Cognition recall + Constraint envelope
+</code></pre>
+<p><strong>纪律是：IM 客户端可以是第一个客户端，但 runtime contract 不能依赖它才能成立。</strong> 任何一个客户端挂了，runtime 还得能独立解释&quot;这个需求走到哪了、为什么&quot;。</p>
+<h3>要素 2：客观事实 vs 制度性事实 — 权限分层的地基</h3>
+<p>这条是整个项目的地基，也是 <a href="03-可迁移法则.html">03-可迁移法则</a> 法则 2 的来源。</p>
+<p>事实分两种：</p>
+<ul>
+<li><strong>客观事实 (brute fact)</strong>：世界本来就是那样，机器去查就能知道。表里有没有 <code>create_day</code> 字段、某任务昨天跑没跑成功、某 SQL 返回多少行。真假不依赖任何人的态度。</li>
+<li><strong>制度性事实 (institutional fact)</strong>：不是被&quot;发现&quot;的，是被<strong>有权限的人宣告出来</strong>的。生效范围是 6 月起、这个残余风险我们接受、这份交付验收通过。在业务方签字之前，&quot;生效范围是 6 月起&quot;这件事<strong>根本不存在</strong>。</li>
+</ul>
+<p><strong>核心推论：机器只能观察第一种事实，永远无权创造第二种。</strong> 模型能力越强，越危险——它不会停止越权裁决，只会把越权写得更流利。所以哪些环节必须人工签字，取决于该环节产出的是哪种事实，而不是模型够不够聪明。</p>
+<p>demands_agent 里 <code>alignment.md</code> 必须经 <code>alignment sign</code>（CLI attestation）签字，手改&quot;已确认:&quot;行无效；<code>release_scope.yaml</code> 只能从签字 alignment 派生。</p>
+<h3>要素 3：所有关键步骤必须可追踪（trace 是生产系统的一部分）</h3>
+<p>OpenAI Agents SDK Tracing、LangSmith、Phoenix 都把 trace、dataset、grader、online evaluation 放在核心位置。这不是巧合——<strong>对工业级 Agent，trace 不是&quot;调试附加项&quot;，是生产系统的一部分。</strong></p>
+<p>demands_agent 的 runtime spine 落在 <code>output/demands/&lt;demand_id&gt;/runs/&lt;run_id&gt;/</code> 下，append-only：</p>
+<pre><code class="language-text">run.yaml                run 元数据 + 状态
+timeline.jsonl          append-only 事件流（seq / event_id / prev_event_id / actor / event_type / refs）
+checkpoint.json         断点
+policy_decisions.jsonl  每次 cloud/local/private 路由决策
+tool_calls.jsonl        工具调用（call_id / status / side-effect flag / evidence ref）
+model_calls.jsonl       模型调用
+approvals.jsonl         审批
+side_effects.jsonl      副作用记录
+artifacts/evidence/     证据镜像
+sensitive/raw/          敏感原始区（限制权限，local-only）
+</code></pre>
+<p><strong>纪律是：任何关于&quot;agent 做了什么&quot;的断言，在 runtime 模式下必须能追溯到 timeline / tool / model / policy / approval log。</strong> 这条纪律的来源是 PM-003——AI 在叙述里说&quot;已验证&quot;，但 timeline 里根本没有对应的 tool_call。从那以后，我的 review packet 固定开头永远是：&quot;请以 RAW 工件为准，不要根据 agent 叙述判断。&quot;</p>
+<h3>要素 4：所有高风险动作必须支持中断与人工裁决</h3>
+<p>LangGraph 的 human-in-the-loop 中间件明确支持 approve / edit / reject / respond——这比&quot;事后审计&quot;更适合工作流型 Agent。<strong>事后审计只能追责，事前审批才能拦截。</strong></p>
+<p>demands_agent 把所有副作用（DDL / release mutation / 平台线上操作 / 带副作用的 MCP 调用）统一进一个 approval-gated 生命周期：</p>
+<pre><code class="language-text">side-effect intent
+  → risk classification
+  → preview / dry-run
+  → approval record
+  → controlled execution
+  → post-check evidence
+  → rollback or closeout
+</code></pre>
+<p><strong>纪律是：agent 永远不静默执行线上变更。</strong> 它只拥有 release package；线上调度修改、执行、验收是开发者的责任。这是有意的边界，不是待补的缺口。</p>
+<h3>要素 5：安全默认拒绝（fail-closed，不是 fail-open）</h3>
+<p>MCP 官方安全文档与 Anthropic 的 prompt injection 研究都指出：连接外部系统的 Agent 会引入新的数据访问与执行路径风险。所以需要 allowlist、最小权限、双向审计、敏感工具审批。</p>
+<p>demands_agent 在两个地方 fail-closed：</p>
+<ol>
+<li><strong>Cloud boundary</strong>：检测到 raw rowset / API key / bearer token / cookie / password / 本地必敏感物料时，直接阻断 cloud payload，不让它进入云端模型 context。</li>
+<li><strong>DB 查询路由</strong>：<code>query_sr()</code> 是 SR-only，遇到 SR 错误（包括表不存在）直接 fail-closed，不会自动降级到 Hive。降级必须走明确的 <code>query_auto()</code> 路径，且只在 Presto OOM 时才转 Hive。</li>
+</ol>
+<p><strong>纪律是：宁可误拦，不可漏放。</strong> 一次误拦是可以调试的工程问题；一次 raw data 上云是没法撤回的安全事件。</p>
+<h3>要素 6：分类系统封闭起步、按需生长</h3>
+<p>这条针对的是&quot;分类字段杂物抽屉化&quot;的病。如果允许 <code>finding_kind</code> / <code>check_type</code> / <code>violation_type</code> 这类字段随手填任意字符串，半年后字段里就躺着四十个类型：有的重复、有的没人记得含义、有的只用过一次。分类系统就死了。</p>
+<p>demands_agent 的解法是两条纪律的组合：</p>
+<ol>
+<li><strong>起步封闭</strong>：第一版只放确实需要的少数几个类型，不在名单里的值直接拒绝。</li>
+<li><strong>判例驱动生长</strong>：新类型必须由真实案例逼出来，且新增时必须回答三个问题——这个类型的事实由谁有权写入？需要什么证据支撑？什么条件下会失效？回答不了就不许进。</li>
+</ol>
+<p><strong>纪律是：分类系统像法律一样，由判例驱动扩充，而不是由立法者的想象力驱动扩充。</strong> 详见 <a href="03-可迁移法则.html">03-可迁移法则</a> 法则 8。</p>
+<hr>
+<h2>三、长程任务的工业鲁棒性 — 五条具体机制</h2>
+<p>这是本文最实用的一节。很多 Agent demo 能在 happy path 上跑得很漂亮，一上工业现场就崩——原因是长程任务（跨多次工具调用、跨人工审批、跨中断恢复）需要一套工业鲁棒性机制，而这些机制在 demo 阶段根本不会被触发。</p>
+<p>下面五条机制，每一条都对应 demands_agent 里被真实事故逼出来的实现。我把它们写成&quot;问题 → 机制 → 反例&quot;的形式，方便迁移到别的 Agent 项目。</p>
+<h3>机制 1：显式的 Run State Model — 把&quot;等外部输入&quot;从失败里救出来</h3>
+<p><strong>问题</strong>：Agent 在 S2 阶段需要业务方确认一个字段口径，但业务方还没回复。传统做法是把这次 run 标成 <code>failed</code>——这等于把&quot;等待&quot;和&quot;做错了&quot;混为一谈。下次想恢复时，系统会以为这是个失败任务，要么从头来，要么需要人工澄清。</p>
+<p><strong>机制</strong>：显式区分四种 run state，并定义合法迁移：</p>
+<pre><code class="language-text">running                          唯一接受 writer mutation 的状态
+blocked-awaiting-external-input  非终态等待（人或外部系统）
+completed                        终态成功
+failed                           终态失败
+</code></pre>
+<p>合法迁移只有：<code>none→running</code>、<code>running→{blocked, completed, failed}</code>、<code>blocked→{running, completed, failed}</code>。</p>
+<div class="mermaid">stateDiagram-v2
+    [*] --> running
+    running --> blocked: 等业务方/外部系统
+    running --> completed: gate 全过
+    running --> failed: 真实失败
+    blocked --> running: run resume apply（带 evidence）
+    blocked --> completed
+    blocked --> failed
+    completed --> [*]
+    failed --> [*]
+
+    note right of blocked
+      非终态：blocked_reason + evidence
+      checkpoint: current_step = run_blocked
+      无 auto-resume 路径
+    end note</div>
+
+<p><strong>关键是非终态 <code>blocked</code> 的存在</strong>——它让&quot;等业务方签字&quot;这件事被如实记录，而不是被编码成实现失败。注意：<strong>没有 auto-resume 路径</strong>——自动恢复等于绕过人工确认。</p>
+<p>blocking 会写 <code>run.yaml</code>（含 <code>blocked_reason</code> / UTC <code>blocked_at</code> / 至少一个 evidence ref）、append <code>run_blocked</code> 事件、保存 <code>checkpoint.json</code>（<code>current_step: run_blocked</code>）。resume 必须用 <code>run resume apply</code> 并带 evidence ref，<strong>没有 auto-resume 路径</strong>——因为自动恢复等于绕过人工确认。</p>
+<p><strong>反例</strong>：PM-006 里有一个&quot;等业务方确认&quot;被写成了实现失败，结果半个月后没人记得这个需求在等什么，只能从头捋。</p>
+<p><strong>可迁移判断</strong>：任何涉及&quot;等人 / 等外部系统&quot;的长程 Agent，都必须有非终态 blocked 状态，否则等待会被误判成失败。</p>
+<h3>机制 2：Checkpoint 用 hash 绑定，resume 必须校验 timeline tail</h3>
+<p><strong>问题</strong>：长任务断点恢复，最怕的是&quot;恢复到的状态已经被篡改&quot;。如果 checkpoint 只记录&quot;current_step = s3_probe&quot;，攻击者（或一个手贱的开发者）可以改掉中间产物，然后 resume，系统会基于被篡改的状态继续跑。</p>
+<p><strong>机制</strong>：checkpoint 不只记录 step，还记录：</p>
+<ul>
+<li><code>last_event_id</code> / <code>last_sequence</code>（绑定 timeline 末尾）</li>
+<li><code>resume_step_id</code> / <code>resume_hint</code></li>
+<li>关键产物的 hash</li>
+</ul>
+<p>resume 时会校验 checkpoint hash 和 timeline tail——<strong>如果中间产物被改过，hash 对不上，resume 直接拒绝。</strong> 这把&quot;断点恢复&quot;从&quot;信任本地文件&quot;升级成&quot;密码学校验&quot;。</p>
+<p>对于 blocked run，checkpoint 必须保持 resumable 而非 terminal：<code>current_step: run_blocked</code>，<code>resume_step_id: run_blocked</code>，<code>resume_step_input_ref</code> 指向 blocking evidence。这样 blocked run 永远能被恢复，不会因为 checkpoint 写成 terminal 而死锁。</p>
+<p><strong>反例</strong>：PM-008 是&quot;回溯表语义误判 + 缺乏事实核查&quot;，根因之一就是中间状态被当成可信，没做绑定校验。</p>
+<p><strong>可迁移判断</strong>：任何支持 resume 的 Agent，checkpoint 必须绑定不可篡改的 anchor（hash / event id / sequence），否则 resume 等于&quot;信任任意中间状态&quot;。</p>
+<h3>机制 3：DB Query 的 Audit Identity — 区分&quot;语义&quot;和&quot;物理执行&quot;</h3>
+<p><strong>问题</strong>：同一条 SQL 在 SR 失败、降级到 MySQL 成功。如果只用 SQL 文本做查询 id，这两次执行会被合并成一条记录——排查时根本看不出&quot;失败的那次是 SR，成功的那次是 MySQL&quot;。</p>
+<p><strong>机制</strong>：runtime-bound DB query log 区分两个维度：</p>
+<ul>
+<li><code>query_hash</code>：标识 SQL 文本，跨 fallback attempt 可能相同。</li>
+<li><code>attempt_id</code> / <code>request_id</code> / <code>tool_call_id</code>：每次物理执行独立，所以 SR 失败和 MySQL 成功能保持分别可查。</li>
+</ul>
+<p><code>policy_decisions.jsonl</code> 在 <code>request_metadata</code> 下记录 attempt 元数据；timeline refs 和 tool-call 记录携带相同的 <code>attempt_id</code>。成功的 DB query tool 记录会暴露 <code>authoritative_evidence_path</code> / <code>authoritative_evidence_ref</code>，指向对应的 evidence 镜像。</p>
+<p><strong>这里有一个反直觉的设计</strong>：失败的 DB query 记录也能满足 demand 级 evidence coverage——前提是它是 policy 授权的、timeline 关联的、且引用了 failed exploration evidence。这不是放水，而是承认&quot;证明某表不存在&quot;本身就是有效证据。但单 run acceptance CLI 默认仍要求至少一次成功的 DB query，S3 聚合 runtime audit 才接受 failure-only probe run。</p>
+<p><strong>可迁移判断</strong>：任何会做 fallback / retry 的 Agent，查询/调用的 audit id 必须区分语义和物理执行，否则失败分析会被合并掩盖。</p>
+<h3>机制 4：Stage truth vs Runtime truth 双真相面，且不互相覆盖</h3>
+<p><strong>问题</strong>：一个需求有两类状态要表达——&quot;S0-S4 gate 走到哪了&quot;（工作流状态）和&quot;agent 实际怎么走到那一步的&quot;（运行态轨迹）。如果揉进一个文件，要么 gate 状态被 runtime 细节淹没，要么 runtime 轨迹被 gate 状态覆盖。</p>
+<p><strong>机制</strong>：两个 status surface，职责严格分离：</p>
+<table>
+<thead>
+<tr>
+<th>Surface</th>
+<th>角色</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>hooks/status.json</code></td>
+<td>权威的 S0-S4 stage 状态（PASS/WARN/FAIL/BLOCKED）</td>
+</tr>
+<tr>
+<td><code>runs/&lt;run_id&gt;/</code></td>
+<td>runtime 执行轨迹和 evidence</td>
+</tr>
+</tbody></table>
+<p><strong>纪律是：stage truth 和 runtime truth 不能互相覆盖。</strong> Stage 状态记录&quot;这个需求有没有过工作流门禁&quot;；runtime 记录&quot;agent 是怎么达到那个状态的&quot;。一个 demand 可以 stage PASS 但 runtime 显示走了弯路；也可以 runtime 干净但 stage 仍 BLOCKED。<code>run current</code> 可能返回一个 blocked run，workflow binding 不会静默替换它。</p>
+<p><strong>可迁移判断</strong>：任何 Agent 系统都有&quot;业务流程状态&quot;和&quot;执行轨迹&quot;两层真相，必须显式分文件、分职责，否则一定有一层会被另一层污染。</p>
+<h3>机制 5：昂贵操作只用来兑现预言，不用来探索</h3>
+<p><strong>问题</strong>：全量重跑、模型升级、真实业务打扰——这些昂贵操作如果用来&quot;试试看&quot;，每次的信息产出都很低（跑通了不知道为什么通，跑挂了不知道为什么挂）。</p>
+<p><strong>机制</strong>：demands_agent 的预演清单是 <code>staged dry-run → 预期全绿 → 才 fresh rerun</code>。推广形式是：<strong>任何昂贵动作之前，先写下预期结果；跑完对账。对不上的偏差就是下一个 issue 的全部内容。</strong></p>
+<p>这条机制来自 PM-010/011——历史回灌反复试错，根因是没有先核验源数据可回放性、没有先收敛 SQL 执行路径。改成&quot;先预演、写预期、再真实执行&quot;之后，每次昂贵操作的信息产出最大化。</p>
+<p><strong>可迁移判断</strong>：任何涉及 rerun / replay / 全量重跑的 Agent，必须有&quot;先 dry-run + 写预期 + 再 fresh run&quot;的纪律，否则 rerun 会退化为昂贵的盲目探索。</p>
+<hr>
+<h2>四、把六要素和五机制收回到一个判断框架</h2>
+<p>如果有人拿着一个 Agent 系统来问我&quot;这个能不能上工业现场&quot;，我会用下面这个清单过一遍。<strong>它不是 feature checklist，是可证伪的判别条件</strong>——任何一条答不上来，这个系统就还不能算工业级：</p>
+<pre><code class="language-text">[ 能力 / 治理分层 ]
+  □ 有没有一个不依赖具体客户端的 core runtime？
+  □ 客户端 adapter 是不是&quot;客户端&quot;而不是&quot;状态真相所有者&quot;？
+
+[ 事实权限 ]
+  □ 系统里哪些环节产出&quot;客观事实&quot;，哪些产出&quot;制度性事实&quot;？
+  □ 制度性事实的确认权是不是显式留给了人，且无法被机器绕过？
+
+[ 可追踪 ]
+  □ &quot;agent 做了什么&quot;的每一条断言，能不能追溯到 timeline / tool / model log？
+  □ 失败的时候有没有留下可审计的痕迹？
+
+[ 可中断 / 可审批 ]
+  □ 高风险动作（写库 / 写代码 / 线上变更）是不是 approval-gated？
+  □ &quot;等外部输入&quot;是不是被编码成非终态 blocked，而不是 failed？
+
+[ 边界 / fail-closed ]
+  □ raw data / credential 进云端模型 context 时，是不是默认阻断？
+  □ 失败时是 fail-closed（宁可误拦）还是 fail-open（宁可放过）？
+
+[ 长程鲁棒性 ]
+  □ checkpoint 是不是用 hash / event id 绑定，能检测中间状态篡改？
+  □ 查询/调用的 audit id 是不是区分了语义和物理执行？
+  □ 昂贵操作之前，是不是先写预期、跑完对账？
+</code></pre>
+<p>这个框架的价值不在&quot;全勾就过&quot;，而在<strong>任何一格答不上来，就是下一个要补的工程切片</strong>。demands_agent 自己也还有没补完的格子（比如&quot;runtime truth 还没要求覆盖每一条 release claim&quot;），但它至少知道缺口在哪。</p>
+<hr>
+<h2>五、回到那个更宏观的问题：什么不是 Agent</h2>
+<p>最后退一步说。判断&quot;什么是 Agent&quot;容易陷进 feature 堆砌，所以我更愿意反过来——<strong>先把&quot;什么不是 Agent&quot;说清楚</strong>：</p>
+<ul>
+<li><strong>不是更长的 prompt。</strong> Prompt 再长，没有 runtime 绑定，AI 的输出就是叙述，不是可审计的执行。</li>
+<li><strong>不是一组脚本的集合。</strong> 脚本没有状态机、没有 checkpoint、没有 approval，断一次就废。</li>
+<li><strong>不是 IM bot。</strong> Bot 是客户端，客户端不拥有 runtime 真相。</li>
+<li><strong>不是&quot;能调用工具的 LLM&quot;。</strong> 工具调用是能力面；没有治理面和运行态面，它只是&quot;会花式撒谎的 LLM 包装&quot;。</li>
+<li><strong>不是多智能体。</strong> 先把单 Agent + 明确工具做强；只有当工具过载、路由混乱、任务天然可分时，才拆多 Agent。OpenAI 和 Anthropic 的官方指南都强调这一点。</li>
+</ul>
+<p>这些&quot;不是&quot;的共同点是：<strong>它们都只占了 Agent 的能力面，丢了治理面和运行态面。</strong> 而 demands_agent 这个项目对我最大的改变，就是把注意力从&quot;让 AI 更能干&quot;转移到&quot;让 AI 的不可信变得可验证、可拦截、可恢复&quot;。</p>
+<p>这是我从做这个项目里学到的、最值钱的一件事。</p>
+<hr>
+<h2>附：本文的实证锚点</h2>
+<p>本文每一条机制都不是泛泛而谈，对应 demands_agent 里的真实契约：</p>
+<table>
+<thead>
+<tr>
+<th>机制</th>
+<th>真实锚点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Run state model</td>
+<td><code>runtime/run_store.py</code> 的 blocked/resume 状态机；SLICE-AC003</td>
+</tr>
+<tr>
+<td>Checkpoint hash 绑定</td>
+<td><code>runtime/checkpoint.py</code> 的 hash + timeline tail 校验</td>
+</tr>
+<tr>
+<td>DB query audit identity</td>
+<td><code>private_execution/gateway.py</code> 的 attempt_id / request_metadata</td>
+</tr>
+<tr>
+<td>Stage vs Runtime 双真相</td>
+<td><code>hooks/status.json</code> ↔ <code>runs/&lt;run_id&gt;/</code>；<code>runtime/workflow.py</code></td>
+</tr>
+<tr>
+<td>Approval-gated side effects</td>
+<td><code>runtime/side_effects.py</code> 的 plan→preview→approval→execute→postcheck</td>
+</tr>
+<tr>
+<td>Cloud boundary fail-closed</td>
+<td><code>private_execution/cloud_boundary.py</code></td>
+</tr>
+<tr>
+<td>FKC 分层</td>
+<td><code>memory/fkc_schema.py</code> 的 FactRecord/KnowledgeEntry/CognitionPolicy</td>
+</tr>
+</tbody></table>
+<p>想看这些机制怎么在一个真实需求里串起来，回到 <a href="02-工程系统全景.html">02-工程系统全景</a>。想看它们怎么被事故逼出来的，去 <a href="04-真实复盘.html">04-真实复盘</a>。</p>
+<hr>
+<p>上一篇：<a href="06-收获与边界.html">06-收获与边界</a></p>
+
+<div class="nav"><a href="06-收获与边界.html">← 上一篇：06-收获与边界</a><span></span></div>
+</div>
+</body>
+</html>

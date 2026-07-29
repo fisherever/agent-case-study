@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>03 · 可迁移法则 — 从 21 篇 postmortem 提炼的 10 条</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>document.addEventListener("DOMContentLoaded",()=>{
+  mermaid.initialize({startOnLoad:true,theme:"neutral",securityLevel:"loose"});
+  // lightbox：点击 mermaid 块 → 全屏放大；点遮罩关闭；ESC 关闭
+  // 关键：mermaid 渲染后会把 .mermaid 里的文本替换成 svg，所以点击时
+  // 要在 lightbox 里重建一个 .mermaid div 放原始文本，再调用 mermaid.run() 重新渲染
+  const lb=document.createElement("div");lb.className="lightbox";document.body.appendChild(lb);
+  // 保存每张图的原始 mermaid 代码（渲染前抓取）
+  const sources=new Map();
+  document.querySelectorAll(".mermaid").forEach((m,i)=>{
+    sources.set(i,m.textContent);m.dataset.src=i;
+  });
+  document.querySelectorAll(".mermaid").forEach((m,i)=>{
+    m.addEventListener("click",async()=>{
+      const srcId=m.dataset.src;
+      const code=sources.get(Number(srcId));
+      const holder=document.createElement("div");
+      holder.className="mermaid-holder";
+      lb.innerHTML="";lb.appendChild(holder);lb.classList.add("open");
+      // 用 mermaid.render 拿 svg 字符串（不依赖 .mermaid class，避免 run() 的 class 识别问题）
+      try{
+        const {svg}=await mermaid.render("lb"+Date.now(),code);
+        holder.innerHTML=svg;
+        const s=holder.querySelector("svg");
+        // 从 viewBox 解析原始内容尺寸，强制设为绝对像素（覆盖 mermaid 的 width:100%/max-width 限制）
+        const vb=(s.getAttribute("viewBox")||"").split(" ");
+        const w=parseFloat(vb[2]),h=parseFloat(vb[3]);
+        if(w&&h){s.removeAttribute("style");s.setAttribute("width",w);s.setAttribute("height",h);}
+      }catch(e){console.error("lightbox render failed",e);holder.textContent="渲染失败: "+e.message}
+    });
+  });
+  lb.addEventListener("click",()=>lb.classList.remove("open"));
+  document.addEventListener("keydown",e=>{if(e.key==="Escape")lb.classList.remove("open")});
+})</script>
+<style>
+:root {
+  --bg:#fafaf7; --card:#ffffff; --ink:#1f2328; --muted:#57606a;
+  --accent:#b45309; --accent-soft:#fef3c7; --rule:#e5e3dd;
+  --code-bg:#f6f3ee; --border:#d6d3c7;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:2.5rem 1rem 4rem;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,"PingFang SC","Noto Sans CJK SC","Helvetica Neue",sans-serif;
+  line-height:1.75;font-size:16px}
+.wrap{max-width:820px;margin:0 auto}
+header.essay{text-align:center;margin-bottom:2.5rem;padding-bottom:1.5rem;border-bottom:1px solid var(--rule)}
+header.essay .eyebrow{font-size:.8rem;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);font-weight:600}
+header.essay h1{font-size:2rem;margin:.5rem 0;letter-spacing:-.01em}
+header.essay .sub{color:var(--muted);font-size:.95rem}
+h1{font-size:1.8rem;margin:2rem 0 .8rem;padding-bottom:.4rem;border-bottom:2px solid var(--accent);display:inline-block}
+h2{font-size:1.4rem;margin:2.5rem 0 .8rem;padding-bottom:.4rem;border-bottom:1px solid var(--rule)}
+h3{font-size:1.15rem;margin:1.8rem 0 .5rem}
+h4{font-size:1rem;margin:1.2rem 0 .4rem;color:var(--accent)}
+p{margin:.6rem 0}
+strong{color:var(--ink)} em{color:var(--accent);font-style:normal;font-weight:600}
+blockquote{margin:1.2rem 0;padding:.9rem 1.2rem;background:var(--accent-soft);
+  border-left:4px solid var(--accent);border-radius:0 6px 6px 0;color:#78350f}
+blockquote p{margin:.3rem 0}
+ul,ol{padding-left:1.4rem} li{margin:.3rem 0}
+code{background:var(--code-bg);padding:.1rem .4rem;border-radius:3px;
+  font-family:"SF Mono","JetBrains Mono",Consolas,monospace;font-size:.88em;color:#92400e}
+pre{background:#1f2328;color:#e6edf3;padding:1rem 1.2rem;border-radius:8px;
+  overflow-x:auto;font-size:.85rem;line-height:1.5}
+pre code{background:none;color:inherit;padding:0}
+table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.9rem}
+th,td{border:1px solid var(--border);padding:.6rem .8rem;text-align:left;vertical-align:top}
+th{background:var(--code-bg);font-weight:600}
+tr:nth-child(even) td{background:#fcfbf7}
+.mermaid{margin:1.5rem 0;text-align:center;background:var(--card);
+  padding:1rem;border-radius:8px;border:1px solid var(--rule);
+  cursor:zoom-in;position:relative;transition:box-shadow .15s}
+.mermaid:hover{box-shadow:0 0 0 2px var(--accent)}
+.mermaid::after{content:"点击放大";position:absolute;top:.4rem;right:.6rem;
+  font-size:.7rem;color:var(--muted);opacity:.7}
+/* lightbox：点击 mermaid 后的全屏遮罩 */
+.lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);
+  z-index:9999;overflow:auto;padding:2rem;cursor:zoom-out}
+.lightbox.open{display:flex;align-items:center;justify-content:center}
+.lightbox .mermaid-holder{background:var(--card);border-radius:8px;padding:1.5rem;
+  display:inline-block;cursor:default}
+.nav{display:flex;justify-content:space-between;margin:3rem 0 0;padding:1.2rem 0 0;
+  border-top:1px solid var(--rule);font-size:.9rem}
+.nav a{color:var(--accent);text-decoration:none}
+.nav a:hover{text-decoration:underline}
+hr{border:none;border-top:1px solid var(--rule);margin:2rem 0}
+a{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="essay">
+<div class="eyebrow">第 03 篇</div>
+<h1>03 · 可迁移法则 — 从 21 篇 postmortem 提炼的 10 条</h1>
+<div class="sub">为什么读这篇：这是整个案例集最值钱的一篇。</div>
+</header>
+<blockquote>
+<p>为什么读这篇：这是整个案例集最值钱的一篇。
+读完带走：10 条可以从这个项目迁移到任何 Agent 项目的法则，每条都有反例、原则、本项目实例、迁移指引。</p>
+</blockquote>
+<h2>这篇为什么最重要</h2>
+<p>代码会过期，模型会换代，但这 10 条法则不会。它们是我从 21 篇 postmortem（PM-001~021）里反复被打脸之后提炼出来的——<strong>每一条背后都站着至少一次真实事故</strong>。</p>
+<p>我刻意把它们写成&quot;法则&quot;而不是&quot;建议&quot;。&quot;建议&quot;可以不遵守，&quot;法则&quot;是不遵守就会重新交学费。每条法则的格式统一：</p>
+<blockquote>
+<p><strong>法则 N：一句话标题</strong></p>
+<ul>
+<li><strong>反例</strong>：不遵守时会怎样（对应真实 PM）</li>
+<li><strong>原则</strong>：为什么这条成立</li>
+<li><strong>本项目实例</strong>：在 demands_agent 里怎么落地</li>
+<li><strong>如何迁移</strong>：用到别的 Agent 项目时怎么做</li>
+</ul>
+</blockquote>
+<hr>
+<h2>法则 1：价值住在&quot;验证&quot;里，不住在&quot;生成&quot;里</h2>
+<ul>
+<li><strong>反例</strong>：PM-003——AI 未做字段核验直接猜测并交付，导致脚本失效。生成内容很流畅，但根本没去查字段是否存在。</li>
+<li><strong>原则</strong>：生成能力会被下一代模型碾压，验证能力随模型变强而增值。判别工具是一个过滤器——假设 worker 无限聪明且诚实，这段代码还需要吗？需要的进 kernel/contract（升值），不需要的进 scaffolding（标注退役条件）。</li>
+<li><strong>本项目实例（诚实版）</strong>：evidence v0.6 体系（hash/policy/citation/stale 检测）是&quot;验证&quot;的工程化，release 声明只能从 evidence 派生——这是做透了的部分。但 <strong>kernel vs scaffolding 的系统化资产分类并没有落地</strong>：目前只有 memory 层有退役标注（<code>review_status: deprecated/refuted/stale</code>），模块/契约/gate 层面没有可见的&quot;这条该升值 / 这条该退役&quot;标注。我自己也无法一眼看出哪些代码是 kernel。所以这条法则对项目而言是<strong>方向正确但执行未完成</strong>，我把它列为第一条，是因为它应该成为下一步的资产分类纪律。</li>
+<li><strong>如何迁移</strong>：做任何 Agent 项目，第一步问&quot;这个项目里什么是生成、什么是验证&quot;。把工程力气投在验证侧——它会随模型变强而升值。但别重蹈我的覆辙：<strong>只把验证做出来还不够，要同时给&quot;哪些是会升值的 kernel&quot;打上可见标注</strong>，否则下一个模型升级时你不知道该退役什么。</li>
+</ul>
+<h2>法则 2：区分客观事实和制度性事实，是整个 Agent 治理的地基</h2>
+<ul>
+<li><strong>反例</strong>：参数化指标被静态字段化（ISSUE-010）——AI 把一个本该业务方回答的语义问题（核销率带不带月份筛选），自己拍板成了静态字段，导致看板数字静默出错。</li>
+<li><strong>原则</strong>：事实分两种。<strong>客观事实</strong>（brute fact）机器去查就能知道；<strong>制度性事实</strong>（institutional fact）必须由有权限的人宣告才存在。机器只能观察第一种，永远无权创造第二种——<strong>不是因为做不好，是因为没资格</strong>。模型越强，越危险，因为它会把越权写得更流利。</li>
+<li><strong>本项目实例</strong>：<code>alignment.md</code> 必须经 <code>alignment sign</code>（CLI attestation）签字，手改&quot;已确认:&quot;行无效；<code>release_scope.yaml</code> 只能从签字 alignment 派生。</li>
+<li><strong>如何迁移</strong>：拿到一个 Agent 项目，先列清单——哪些环节产出客观事实（可以交给机器 + evidence），哪些产出制度性事实（必须人工签字）。后者永远不能因为&quot;模型够强了&quot;就去掉人工确认。</li>
+</ul>
+<h2>法则 3：对能力的信任永远不能替代对权限的约束</h2>
+<ul>
+<li><strong>反例</strong>：PM-016——样例验证 SQL 被误交付为生产 merge patch。AI 能力完全够写出正确的 patch，但它没有先拉现网 SQL 核对，而是直接产出了一个带样例过滤的独立查询。</li>
+<li><strong>原则</strong>：<code>--force</code> 管控、taint 标记、approval-gated side effects——这些不是对愚蠢的防范，是制度对任何智能体（包括天才员工）的要求。<strong>能力越强，越需要权限约束，而不是越可以放松约束。</strong></li>
+<li><strong>本项目实例</strong>：所有副作用（DDL / release mutation / 线上操作）走统一生命周期：<code>intent → risk classification → preview → approval → controlled execution → post-check → rollback</code>。agent 永远不静默执行线上变更。</li>
+<li><strong>如何迁移</strong>：每次模型升级，不要问&quot;能不能去掉这层审批&quot;，要问&quot;这层审批防的是不是制度性事实&quot;。如果是，模型升级与此无关。</li>
+</ul>
+<h2>法则 4：先归类，再修复；修复必须收敛到原语，而不是长出补丁</h2>
+<ul>
+<li><strong>反例</strong>：PM-002——需求处理绕过 SOP 导致方向偏差。出问题时只修那一个点，没有归类，结果同类问题反复出现。</li>
+<li><strong>原则</strong>：走出 bug 循环的全部秘密就这一句。操作化为 issue 模板三问：这属于哪个 fact class？违规类型是什么（drift / admission gap / unauthorized write / contract gap）？结构修复对应哪个既有原语？<strong>归类失败本身是最高价值信号</strong>——它意味着 taxonomy 需要生长，而不是需要一个新 gate。</li>
+<li><strong>本项目实例</strong>：21 篇 PM 全部按 Category（Config / Process / Data）+ Severity（High/Medium/Low）归类，见 <a href="04-真实复盘.html">04-真实复盘</a> 的统计表。每次新 PM 先归类，再决定是加 gate、改 contract、还是生长 taxonomy。</li>
+<li><strong>如何迁移</strong>：建立 issue 模板三问。每次出 bug 先填这三问再动手修——你会发现自己有一半的&quot;新 bug&quot;其实是老问题换了层皮。</li>
+</ul>
+<h2>法则 5：装循环检测器，把&quot;是否在打转&quot;从体感变成可判定</h2>
+<ul>
+<li><strong>反例</strong>：PM-010/011——历史回灌反复试错。SQL 执行路径没收敛，同样的失败重复出现，但因为每次都在&quot;修东西&quot;，体感上像在推进，实际在打转。</li>
+<li><strong>原则</strong>：每轮迭代后问四个问题：边界推进了吗？新问题可归类吗？已修问题复发了吗？剩余阻断是等人还是等工程？<strong>四问全过就是掘进，不是循环。</strong></li>
+<li><strong>本项目实例</strong>：这套四问现在是我做任何长任务的标准收尾动作。它治好了我至少两次&quot;走不出来&quot;的焦虑——那两次数据都显示我在掘进。</li>
+<li><strong>如何迁移</strong>：把四问写进每次迭代的收尾模板。如果你发现四问里有任何一个答不上来，停下来——你不是在推进，是在打转。</li>
+</ul>
+<h2>法则 6：昂贵操作只用来兑现预言，不用来探索</h2>
+<ul>
+<li><strong>反例</strong>：PM-010——历史回灌未先核验源数据可回放性，直接开跑，结果反复切换执行路径。</li>
+<li><strong>原则</strong>：预演清单（<code>staged dry-run → 预期全绿 → 才 fresh rerun</code>）把 rerun 从&quot;试试看&quot;变成&quot;验证一个已被预演支持的预期&quot;。推广形式：<strong>任何昂贵动作（全量重跑、模型升级、真实业务打扰）之前，先写下预期结果；跑完对账。对不上的偏差就是下一个 issue 的全部内容。</strong></li>
+<li><strong>本项目实例</strong>：release 前的 self-test convergence、DS 兼容性 smoke、schema 真值核验，都是&quot;先写预期再执行&quot;的实例。</li>
+<li><strong>如何迁移</strong>：任何涉及 rerun / replay / 全量重跑 / 真实用户打扰的操作，强制要求&quot;先 dry-run + 写预期 + 再 fresh run&quot;。rerun 退化为盲目探索是最贵的浪费。</li>
+</ul>
+<h2>法则 7：只看 RAW 工件，不看执行者叙述</h2>
+<ul>
+<li><strong>反例</strong>：PM-003——AI 在分析里写&quot;已验证字段存在&quot;，但实际根本没跑查询。叙述是它的输出，不是证据。</li>
+<li><strong>原则</strong>：review 的固定开头永远是一句——&quot;请以 RAW gate 为准，不要根据 agent 叙述判断。&quot;这不是不信任，是方法论。<strong>叙述是 worker 的输出，工件才是证据。</strong></li>
+<li><strong>本项目实例</strong>：runtime spine 下的 <code>timeline.jsonl</code> / <code>tool_calls.jsonl</code> / <code>policy_decisions.jsonl</code> 是执行真相的唯一来源。文档或聊天摘要不能覆盖 runtime logs。</li>
+<li><strong>如何迁移</strong>：这条延伸出一个我很珍惜的观察——<strong>你组织项目的方式本身就是产品的同构物</strong>。builder/executor/monitor/外部 reviewer 的角色分离、拿证据包来评审、裁定写回 contract——你在用治理 Agent 的方法治理&quot;开发 Agent 的过程&quot;。这个元技能比任何单条代码都值钱。</li>
+</ul>
+<h2>法则 8：分类系统要&quot;封闭起步、按需生长&quot;，否则一定退化成杂物抽屉</h2>
+<ul>
+<li><strong>反例</strong>：如果允许 <code>finding_kind</code> / <code>check_type</code> / <code>violation_type</code> 这类字段随手填任意字符串，半年后字段里躺着四十个类型——重复、遗忘、只用过一次。分类系统就死了。</li>
+<li><strong>原则</strong>：两条纪律的组合。<strong>第一，起步封闭</strong>：第一版只放确实需要的少数几个类型，不在名单里的值直接拒绝。<strong>第二，判例驱动生长</strong>：新类型必须由真实案例逼出来，且新增时必须回答三个问题——这个类型的事实由谁有权写入？需要什么证据支撑？什么条件下会失效？回答不了就不许进。</li>
+<li><strong>本项目实例</strong>：postmortem 的 Category 只有三个（Config / Process / Data），但够用。<code>finding_kind</code> 第一版只有四个值。分类系统像法律一样，由判例驱动扩充，而不是由立法者的想象力驱动扩充。</li>
+<li><strong>如何迁移</strong>：任何涉及&quot;类型字段&quot;的设计，默认封闭起步。想加新值？强制回答三问。这条治好了我多次&quot;杂物抽屉化&quot;的病。</li>
+</ul>
+<h2>法则 9：资料和知识点不是同一种东西</h2>
+<ul>
+<li><strong>反例</strong>：PM-020——dwh-quality 项目沉淀了大量表结构、血缘、owner 资料，但&quot;没有形成有效的知识点&quot;。agent 在新需求里仍然从头查 schema，等于资料不存在。</li>
+<li><strong>原则</strong>：<strong>资料回答&quot;是什么&quot;，知识点回答&quot;我下一步应该做什么&quot;。</strong> 一个 memory entry 要被算作 effective knowledge point，必须同时满足五个条件：触发条件（trigger）、决策影响（decision delta）、可被引用（citable）、可被证伪（refutable）、有来源（provenance）。<strong>5 条任一缺失 = 不算知识点，只算 information。</strong></li>
+<li><strong>本项目实例</strong>：FKC schema 强制 memory entry 带 <code>trigger</code> / <code>decision_delta</code> / <code>citation_id</code> / <code>refutation_condition</code> / <code>source</code> 五个字段，缺任一字段 ingestion 拒绝。ingestion 不得把表 schema dump / 血缘 JSON 直接落入 memory。</li>
+<li><strong>如何迁移</strong>：做任何知识库 / RAG / memory 系统，先问&quot;我沉淀的是资料还是知识点&quot;。如果是资料，它不会改变 agent 的任何决策，等于没有。把它转成知识点的唯一方法是补齐那五个字段。</li>
+</ul>
+<h2>法则 10：把&quot;门禁过了&quot;和&quot;交付对了&quot;彻底分开</h2>
+<ul>
+<li><strong>反例</strong>：PM-018——hooks stage s4 + finalize 全部通过，但 release 目录结构不规范、DDL 范围不完整。门禁只校&quot;形式代理信号&quot;，不校&quot;交付覆盖闭环&quot;。</li>
+<li><strong>原则</strong>：门禁的角色必须被诚实地定义为&quot;<strong>必要，但远远不充分</strong>&quot;。它检查文件存在、SQL 命中静态红线、formal release SQL 数量大于零——但它拦不住&quot;结构不规范 + 范围不完整&quot;的 release 被误判为可交付。<strong>永远不要把&quot;gate 过了&quot;当成&quot;交付对了&quot;。</strong></li>
+<li><strong>本项目实例</strong>：hooks finalize 在 PM-018 之后被重新定义为&quot;必要但不充分&quot;。同时增加了 release scope coverage gate，让文档里写明的发布范围和 release 目录产物逐项对账。</li>
+<li><strong>如何迁移</strong>：任何自动化门禁（CI、lint、gate）都只是&quot;形式校验&quot;。把&quot;形式校验通过&quot;和&quot;语义正确&quot;在认知上彻底分开——前者是机器能做的，后者需要人对着 RAW 工件复核。</li>
+</ul>
+<hr>
+<h2>一张图：10 条法则的关系</h2>
+<p>这 10 条不是孤立的，它们围绕三个主题：</p>
+<div class="mermaid">mindmap
+  root((10 条法则))
+    价值判断
+      法则1 验证 > 生成
+      法则2 客观 vs 制度性事实
+      法则3 能力不替代权限约束
+    迭代纪律
+      法则4 先归类再修复
+      法则5 循环检测器
+      法则6 昂贵操作兑现预言
+      法则7 只看 RAW 工件
+    复杂度控制
+      法则8 分类封闭起步
+      法则9 资料≠知识点
+      法则10 门禁过≠交付对</div>
+
+<p>如果只能记三条，记这三组的&quot;纲&quot;：</p>
+<ul>
+<li><strong>价值判断的纲</strong>：法则 1（验证 &gt; 生成）</li>
+<li><strong>迭代纪律的纲</strong>：法则 7（只看 RAW 工件）</li>
+<li><strong>复杂度控制的纲</strong>：法则 10（门禁过 ≠ 交付对）</li>
+</ul>
+<hr>
+<h2>这些法则的局限</h2>
+<p>诚实地说，这 10 条法则有一个共同的前提：<strong>你的场景容不容得下&quot;形式合规地撒谎&quot;。</strong> 如果你的场景是一次性 demo、是 happy path 展示、是容错率极高的玩具，这 10 条都是过度工程。它们只在工业现场——交付出错有真实代价的场景——才成立。</p>
+<p>另外，这 10 条是我从<strong>数据需求 Agent</strong> 这个特定领域提炼的。换到代码 Agent、内容 Agent、客服 Agent，有些法则（比如法则 2 的客观/制度性事实区分）依然成立，有些（比如法则 6 的回灌预言）需要重新翻译。<strong>迁移时不要照搬字面，要迁移法则背后的为什么。</strong></p>
+<hr>
+<p>下一篇：<a href="04-真实复盘.html">04-真实复盘</a> — 这 10 条法则每一条都被哪篇 postmortem 逼出来的，逐篇讲透。</p>
+
+<div class="nav"><span></span><a href="04-真实复盘.html">下一篇：04-真实复盘 →</a></div>
+</div>
+</body>
+</html>

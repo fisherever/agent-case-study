@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>01 · 痛点与设计</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>document.addEventListener("DOMContentLoaded",()=>{
+  mermaid.initialize({startOnLoad:true,theme:"neutral",securityLevel:"loose"});
+  // lightbox：点击 mermaid 块 → 全屏放大；点遮罩关闭；ESC 关闭
+  // 关键：mermaid 渲染后会把 .mermaid 里的文本替换成 svg，所以点击时
+  // 要在 lightbox 里重建一个 .mermaid div 放原始文本，再调用 mermaid.run() 重新渲染
+  const lb=document.createElement("div");lb.className="lightbox";document.body.appendChild(lb);
+  // 保存每张图的原始 mermaid 代码（渲染前抓取）
+  const sources=new Map();
+  document.querySelectorAll(".mermaid").forEach((m,i)=>{
+    sources.set(i,m.textContent);m.dataset.src=i;
+  });
+  document.querySelectorAll(".mermaid").forEach((m,i)=>{
+    m.addEventListener("click",async()=>{
+      const srcId=m.dataset.src;
+      const code=sources.get(Number(srcId));
+      const holder=document.createElement("div");
+      holder.className="mermaid-holder";
+      lb.innerHTML="";lb.appendChild(holder);lb.classList.add("open");
+      // 用 mermaid.render 拿 svg 字符串（不依赖 .mermaid class，避免 run() 的 class 识别问题）
+      try{
+        const {svg}=await mermaid.render("lb"+Date.now(),code);
+        holder.innerHTML=svg;
+        const s=holder.querySelector("svg");
+        // 从 viewBox 解析原始内容尺寸，强制设为绝对像素（覆盖 mermaid 的 width:100%/max-width 限制）
+        const vb=(s.getAttribute("viewBox")||"").split(" ");
+        const w=parseFloat(vb[2]),h=parseFloat(vb[3]);
+        if(w&&h){s.removeAttribute("style");s.setAttribute("width",w);s.setAttribute("height",h);}
+      }catch(e){console.error("lightbox render failed",e);holder.textContent="渲染失败: "+e.message}
+    });
+  });
+  lb.addEventListener("click",()=>lb.classList.remove("open"));
+  document.addEventListener("keydown",e=>{if(e.key==="Escape")lb.classList.remove("open")});
+})</script>
+<style>
+:root {
+  --bg:#fafaf7; --card:#ffffff; --ink:#1f2328; --muted:#57606a;
+  --accent:#b45309; --accent-soft:#fef3c7; --rule:#e5e3dd;
+  --code-bg:#f6f3ee; --border:#d6d3c7;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:2.5rem 1rem 4rem;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,"PingFang SC","Noto Sans CJK SC","Helvetica Neue",sans-serif;
+  line-height:1.75;font-size:16px}
+.wrap{max-width:820px;margin:0 auto}
+header.essay{text-align:center;margin-bottom:2.5rem;padding-bottom:1.5rem;border-bottom:1px solid var(--rule)}
+header.essay .eyebrow{font-size:.8rem;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);font-weight:600}
+header.essay h1{font-size:2rem;margin:.5rem 0;letter-spacing:-.01em}
+header.essay .sub{color:var(--muted);font-size:.95rem}
+h1{font-size:1.8rem;margin:2rem 0 .8rem;padding-bottom:.4rem;border-bottom:2px solid var(--accent);display:inline-block}
+h2{font-size:1.4rem;margin:2.5rem 0 .8rem;padding-bottom:.4rem;border-bottom:1px solid var(--rule)}
+h3{font-size:1.15rem;margin:1.8rem 0 .5rem}
+h4{font-size:1rem;margin:1.2rem 0 .4rem;color:var(--accent)}
+p{margin:.6rem 0}
+strong{color:var(--ink)} em{color:var(--accent);font-style:normal;font-weight:600}
+blockquote{margin:1.2rem 0;padding:.9rem 1.2rem;background:var(--accent-soft);
+  border-left:4px solid var(--accent);border-radius:0 6px 6px 0;color:#78350f}
+blockquote p{margin:.3rem 0}
+ul,ol{padding-left:1.4rem} li{margin:.3rem 0}
+code{background:var(--code-bg);padding:.1rem .4rem;border-radius:3px;
+  font-family:"SF Mono","JetBrains Mono",Consolas,monospace;font-size:.88em;color:#92400e}
+pre{background:#1f2328;color:#e6edf3;padding:1rem 1.2rem;border-radius:8px;
+  overflow-x:auto;font-size:.85rem;line-height:1.5}
+pre code{background:none;color:inherit;padding:0}
+table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.9rem}
+th,td{border:1px solid var(--border);padding:.6rem .8rem;text-align:left;vertical-align:top}
+th{background:var(--code-bg);font-weight:600}
+tr:nth-child(even) td{background:#fcfbf7}
+.mermaid{margin:1.5rem 0;text-align:center;background:var(--card);
+  padding:1rem;border-radius:8px;border:1px solid var(--rule);
+  cursor:zoom-in;position:relative;transition:box-shadow .15s}
+.mermaid:hover{box-shadow:0 0 0 2px var(--accent)}
+.mermaid::after{content:"点击放大";position:absolute;top:.4rem;right:.6rem;
+  font-size:.7rem;color:var(--muted);opacity:.7}
+/* lightbox：点击 mermaid 后的全屏遮罩 */
+.lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);
+  z-index:9999;overflow:auto;padding:2rem;cursor:zoom-out}
+.lightbox.open{display:flex;align-items:center;justify-content:center}
+.lightbox .mermaid-holder{background:var(--card);border-radius:8px;padding:1.5rem;
+  display:inline-block;cursor:default}
+.nav{display:flex;justify-content:space-between;margin:3rem 0 0;padding:1.2rem 0 0;
+  border-top:1px solid var(--rule);font-size:.9rem}
+.nav a{color:var(--accent);text-decoration:none}
+.nav a:hover{text-decoration:underline}
+hr{border:none;border-top:1px solid var(--rule);margin:2rem 0}
+a{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="essay">
+<div class="eyebrow">第 01 篇</div>
+<h1>01 · 痛点与设计</h1>
+<div class="sub">为什么读这篇：这是整个案例的"为什么"。</div>
+</header>
+<blockquote>
+<p>为什么读这篇：这是整个案例的&quot;为什么&quot;。
+读完带走：这事的本质难点是什么 + 我怎么用一套工程结构把它压住。</p>
+</blockquote>
+<h2>痛点：这件事到底难在哪</h2>
+<p>先把伪问题排除掉。<strong>&quot;让 LLM 写出能跑的 SQL&quot; 不是这个项目的难点。</strong> 模型已经够强，写 SQL 这件事在 2026 年基本是 commodity。</p>
+<p>真正的难点是另外四个，它们一个比一个隐蔽，都是被真实事故逼出来的：</p>
+<h3>难点 1：AI 会在交付这件事上&quot;形式合规地撒谎&quot;</h3>
+<p>这是我最早被打脸的地方。Agent 写完一段分析，在叙述里报告&quot;已验证字段存在&quot;。实际上它根本没跑查询——它&quot;觉得&quot;应该存在，就把这当成了验证结论。</p>
+<p>这不是它不诚实。<strong>叙述本来就是它的输出，工件才是证据。</strong> 一个会写漂亮话的模型，加上一个只读叙述不读工件的 review 流程，就等于一个能把谎话说得非常专业的同事。详见 <a href="04-真实复盘.html">04-真实复盘</a> 里的 PM-003（未做字段核验直接猜测并交付）。</p>
+<h3>难点 2：门禁会&quot;形式通过&quot;但漏掉语义</h3>
+<p>我建了一整套 S0–S4 门禁 + 交付前 finalize 汇总。它能检查：文件存在、SQL 命中静态红线、formal release SQL 数量大于零。</p>
+<p>然后 PM-018 给了我一记重锤：一个 release，对象准入矩阵明明白白写着&quot;Hive + SR mirror&quot;（意味着 DDL 要双侧齐备），但 release 目录只产出了 SR DDL，<strong>所有门禁全部通过</strong>。门禁只校&quot;形式代理信号&quot;，不校&quot;交付覆盖闭环&quot;。这件事让我重新定义了门禁的角色：<strong>必要，但远远不充分。</strong></p>
+<h3>难点 3：AI 会替业务方做&quot;它没资格做的决定&quot;</h3>
+<p>需求里说&quot;核销率看板&quot;。AI 一拍脑袋：核销率 = 核销额 / 销售额，写进 release。但真实业务里，核销率是<strong>带月份筛选参数</strong>的指标——把它静态字段化，会导致看板数字静默出错（PM-010，参数化指标被静态字段化）。</p>
+<p>问题不是 AI 算错了，而是<strong>它越权裁决了一个本该业务方回答的语义问题</strong>。模型越强，这种越权写得越流利、越自信、越让人不敢质疑。</p>
+<h3>难点 4：raw data 和 credential 会悄悄溜进云端模型</h3>
+<p>Agent 要查数据库、要带证据做分析。如果不加约束，raw rowset、cookie、token 会随着&quot;分析上下文&quot;一起发给云端模型。一旦发生，这是一次数据安全事件，不是一次 bug。</p>
+<h2>设计：用四道边界把上面四个难点压住</h2>
+<p>我最终落到的设计，本质是<strong>用工程边界把&quot;AI 的不可信&quot;约束成&quot;可验证的交付&quot;</strong>。四道边界，每道对准一个难点。</p>
+<h3>边界 1：S0–S4 工程状态机 + typed routing（对准难点 1、2）</h3>
+<p>需求从采集到上线，被切成五段不可跳过的工程阶段：</p>
+<pre><code class="language-text">S0  术语映射 / 需求采集质量
+S1  需求收集 + alignment 签字
+S2  领域 grounding + 对象准入
+S3  口径追踪 + 方案实现
+S4  release package + 验证
+</code></pre>
+<p>每一阶段都要过 <code>hooks stage sX</code>，交付前还要过 <code>hooks finalize</code> 汇总。<strong>关键不是&quot;有阶段&quot;，而是&quot;阶段之间有强制的产物交接契约&quot;</strong>——S2 没产出 grounding evidence，S3 就启动不了；S3 没产出 evidence plan，S4 就出不了 release。这样 AI 就算想在叙述里糊弄，下游 gate 也会因为缺工件而 BLOCK。</p>
+<p>S0/S1 之后还会进入 typed routing：<code>standard delivery change</code> / <code>complex delivery design</code> / <code>diagnostic investigation</code>。不同类型的需求，required/skipped stages、gate 解释都不一样——不是所有需求都走同一条证据模型。</p>
+<p><code>[真实产物 · 脱敏]</code> 一个 finalize gate 的输出片段（结构真实，数字是示意）：</p>
+<pre><code class="language-text">S2-G0  grounding gate              PASS
+S2-G1  object admission            PASS
+S3-G0  evidence plan               PASS
+S3-G1  probe evidence binding      PASS
+S3-G2  dependency action decision  PASS   22 checks
+S4-G0  transform/sync proof        PASS    6 typed rows
+S4-G1  release scope coverage      FAIL   ← 缺 Hive DDL，拦住了
+─────────────────────────────────────────
+finalize verdict: BLOCKED
+</code></pre>
+<h3>边界 2：客观事实 vs 制度性事实的权限分层（对准难点 3）</h3>
+<p>这是整个项目最重要的一个区分，也是 <a href="03-可迁移法则.html">03-可迁移法则</a> 法则 2 的来源。</p>
+<table>
+<thead>
+<tr>
+<th>事实类型</th>
+<th>例子</th>
+<th>谁有权创造</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>客观事实</strong> (brute fact)</td>
+<td>表里有没有 <code>create_day</code> 字段、某任务昨天是否跑成功、某条 SQL 返回多少行</td>
+<td>机器（配 evidence 绑定）</td>
+</tr>
+<tr>
+<td><strong>制度性事实</strong> (institutional fact)</td>
+<td>生效范围是 6 月 1 日起、这个残余风险我们接受、这份交付验收通过</td>
+<td><strong>人</strong>（业务方签字那一刻才存在）</td>
+</tr>
+</tbody></table>
+<p><code>alignment.md</code> 是制度性事实的唯一合法来源。它必须通过 <code>demands-agent alignment sign</code>（CLI attestation）签字，<strong>手改&quot;已确认:&quot;行无效</strong>。<code>release_scope.yaml</code> 只能从签字 alignment 派生，不能手写。AI 永远只能观察客观事实，永远无权创造制度性事实——<strong>不是因为做不好，是因为没资格</strong>。</p>
+<h3>边界 3：Data Execution Boundary + Private Execution Gateway（对准难点 4）</h3>
+<p>所有数据库查询、SQL 结果采样、血缘调用必须经过数据执行边界。云端模型默认只能消费：<strong>脱敏 evidence summary、hash、rowcount、schema profile、gate code</strong>。</p>
+<p>Private Execution Gateway（PEG）是这条边界的守门员：检测到 raw rowset / credential / cookie / token / 密码 / 本地必敏感物料时，<strong>直接 fail-closed</strong>，不让这些内容进入 cloud-facing model context。每个需求里每一次 DB query 都有一条 PEG policy decision record（<code>policy_decisions.jsonl</code>）。</p>
+<p><code>[真实产物 · 脱敏]</code> 一条 policy decision 的结构：</p>
+<pre><code class="language-json">{
+  &quot;request_id&quot;: &quot;...&quot;,
+  &quot;capability&quot;: &quot;db.query&quot;,
+  &quot;sensitivity&quot;: &quot;raw_result_allowed=false&quot;,
+  &quot;route&quot;: &quot;local_private&quot;,
+  &quot;cloud_payload&quot;: &quot;summary+hash+schema_profile&quot;,
+  &quot;blocked_reasons&quot;: []
+}
+</code></pre>
+<h3>边界 4：Runtime 可恢复 + 只认 RAW 工件（对准难点 1 的&quot;撒谎&quot;）</h3>
+<p>每个需求绑定一个 active run：<code>run.yaml</code> + <code>timeline.jsonl</code> + <code>checkpoint.json</code> + approval / side-effect records。中断后能从 checkpoint resume，而且 resume 时会校验 hash 和 timeline tail，防止状态被篡改。</p>
+<p>更重要的是<strong>review 原则</strong>：我的 review packet 固定开头永远是&quot;请以 RAW gate 为准，不要根据 agent 叙述判断&quot;。runtime logs 和 evidence 是执行真相的唯一来源，文档或聊天摘要不能覆盖它们。这条原则在 PM-018 之后被刻进了项目章程。</p>
+<h2>一个图：四道边界怎么协作</h2>
+<div class="mermaid">flowchart TD
+    R([需求进入]) --> B2
+
+    subgraph B2["边界 2 · 制度性事实必须人签字"]
+        direction LR
+        B2a[review] --> B2b["alignment.md<br/>CLI 签字 attestation"] --> B2c[release_scope.yaml 派生]
+    end
+    B2 --> B1
+
+    subgraph B1["边界 1 · S0–S4 状态机 + 阶段间产物契约"]
+        B1a["hooks stage sX<br/>每阶段门禁"] --> B1b[hooks finalize 汇总]
+        B1n>"gate 只认 RAW 工件<br/>不认叙述"] -.-> B1a
+    end
+
+    B1 -->|"S2/S3 查 DB"| B3
+    B1 -->|S4 产 release| B4
+
+    subgraph B3["边界 3 · Data Execution Boundary"]
+        B3a["PEG fail-closed<br/>raw / credential 不入云"]
+    end
+
+    subgraph B4["release 分层 + 覆盖对账"]
+        direction LR
+        B4a["01_ddl / 02_etl<br/>04_validation / 05_ops"] --> B4b[scope coverage gate]
+    end
+
+    B3 --> B5
+    B4 --> B5
+
+    subgraph B5["边界 4 · Runtime 可恢复 + RAW 工件为唯一执行真相"]
+        B5a["run_id · timeline · checkpoint<br/>resume hash 校验"]
+    end
+
+    classDef boundary fill:#fde68a33,stroke:#d97706,stroke-width:1.5px,color:#92400e
+    classDef truth fill:#bfdbfe33,stroke:#2563eb,stroke-width:1.5px,color:#1e3a8a
+    class B2,B1,B3,B4,B5 boundary
+    class B5 truth</div>
+
+<p>读图顺序：从上到下是需求推进的时序；边界 2 先于一切（没有签字就没有 scope），边界 1 贯穿全程，边界 3/4 在执行和交付时生效，边界 4 是兜底的执行真相层。</p>
+<h2>这套设计没解决什么（诚实的边界）</h2>
+<p>我不想把这套设计包装成银弹。它有几个明确的局限：</p>
+<ol>
+<li><strong>它压不住&quot;语义级漏项&quot;</strong>——PM-018 那种&quot;Hive + SR mirror 但只交了 SR DDL&quot;，需要 release scope coverage gate 配合人工对账，目前仍是&quot;必要不充分&quot;。</li>
+<li><strong>它的 typed routing 还年轻</strong>——三种需求类型的 gate 解释已经分叉，但 evidence 模型还没完全按类型分化。</li>
+<li><strong>它的产品化未完成</strong>——IM review 多轮、writeback、UI 都还是 MVP；这套工程内核很强，但外壳还不够&quot;给非工程师用&quot;。</li>
+<li><strong>线上操作永远归开发者</strong>——agent 只拥有 release package，线上调度修改、执行、验收是开发者的责任。这是有意的边界，不是待补的缺口。</li>
+</ol>
+<p>这些局限我在 <a href="06-收获与边界.html">06-收获与边界</a> 里会展开。</p>
+<h2>设计哲学的一句话总结</h2>
+<p>如果非要把这一篇压缩成一句：</p>
+<blockquote>
+<p><strong>不是让 AI 变得更可信，而是用工程边界让&quot;AI 不可信&quot;这件事变得可验证、可拦截、可恢复。</strong></p>
+</blockquote>
+<p>AI 会不会 hallucinate、会不会越权、会不会形式合规地糊弄——这些我控制不了。我能控制的是：让每一条关键事实都有 evidence 绑定，让每一道越权都有 gate 拦截，让每一次中断都能 resume，让每一份 release 都能被 RAW 工件对账。<strong>把不可信约束成可验证，是这个项目真正的产出。</strong></p>
+<hr>
+<p>上一篇：<a href="00-电梯演讲.html">00-电梯演讲</a> ｜ 下一篇：<a href="02-工程系统全景.html">02-工程系统全景</a></p>
+
+<div class="nav"><a href="00-电梯演讲.html">← 上一篇：00-电梯演讲</a><a href="02-工程系统全景.html">下一篇：02-工程系统全景 →</a></div>
+</div>
+</body>
+</html>

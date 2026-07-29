@@ -1,0 +1,13 @@
+{
+  "name": "agent-case-study-builder",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Markdown → HTML converter for demands_agent case study site",
+  "type": "module",
+  "scripts": {
+    "build": "node build_html.mjs"
+  },
+  "dependencies": {
+    "marked": "^14.0.0"
+  }
+}

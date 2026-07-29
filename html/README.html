@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>demands_agent 案例集</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>document.addEventListener("DOMContentLoaded",()=>{
+  mermaid.initialize({startOnLoad:true,theme:"neutral",securityLevel:"loose"});
+  // lightbox：点击 mermaid 块 → 全屏放大；点遮罩关闭；ESC 关闭
+  // 关键：mermaid 渲染后会把 .mermaid 里的文本替换成 svg，所以点击时
+  // 要在 lightbox 里重建一个 .mermaid div 放原始文本，再调用 mermaid.run() 重新渲染
+  const lb=document.createElement("div");lb.className="lightbox";document.body.appendChild(lb);
+  // 保存每张图的原始 mermaid 代码（渲染前抓取）
+  const sources=new Map();
+  document.querySelectorAll(".mermaid").forEach((m,i)=>{
+    sources.set(i,m.textContent);m.dataset.src=i;
+  });
+  document.querySelectorAll(".mermaid").forEach((m,i)=>{
+    m.addEventListener("click",async()=>{
+      const srcId=m.dataset.src;
+      const code=sources.get(Number(srcId));
+      const holder=document.createElement("div");
+      holder.className="mermaid-holder";
+      lb.innerHTML="";lb.appendChild(holder);lb.classList.add("open");
+      // 用 mermaid.render 拿 svg 字符串（不依赖 .mermaid class，避免 run() 的 class 识别问题）
+      try{
+        const {svg}=await mermaid.render("lb"+Date.now(),code);
+        holder.innerHTML=svg;
+        const s=holder.querySelector("svg");
+        // 从 viewBox 解析原始内容尺寸，强制设为绝对像素（覆盖 mermaid 的 width:100%/max-width 限制）
+        const vb=(s.getAttribute("viewBox")||"").split(" ");
+        const w=parseFloat(vb[2]),h=parseFloat(vb[3]);
+        if(w&&h){s.removeAttribute("style");s.setAttribute("width",w);s.setAttribute("height",h);}
+      }catch(e){console.error("lightbox render failed",e);holder.textContent="渲染失败: "+e.message}
+    });
+  });
+  lb.addEventListener("click",()=>lb.classList.remove("open"));
+  document.addEventListener("keydown",e=>{if(e.key==="Escape")lb.classList.remove("open")});
+})</script>
+<style>
+:root {
+  --bg:#fafaf7; --card:#ffffff; --ink:#1f2328; --muted:#57606a;
+  --accent:#b45309; --accent-soft:#fef3c7; --rule:#e5e3dd;
+  --code-bg:#f6f3ee; --border:#d6d3c7;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:2.5rem 1rem 4rem;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,"PingFang SC","Noto Sans CJK SC","Helvetica Neue",sans-serif;
+  line-height:1.75;font-size:16px}
+.wrap{max-width:820px;margin:0 auto}
+header.essay{text-align:center;margin-bottom:2.5rem;padding-bottom:1.5rem;border-bottom:1px solid var(--rule)}
+header.essay .eyebrow{font-size:.8rem;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);font-weight:600}
+header.essay h1{font-size:2rem;margin:.5rem 0;letter-spacing:-.01em}
+header.essay .sub{color:var(--muted);font-size:.95rem}
+h1{font-size:1.8rem;margin:2rem 0 .8rem;padding-bottom:.4rem;border-bottom:2px solid var(--accent);display:inline-block}
+h2{font-size:1.4rem;margin:2.5rem 0 .8rem;padding-bottom:.4rem;border-bottom:1px solid var(--rule)}
+h3{font-size:1.15rem;margin:1.8rem 0 .5rem}
+h4{font-size:1rem;margin:1.2rem 0 .4rem;color:var(--accent)}
+p{margin:.6rem 0}
+strong{color:var(--ink)} em{color:var(--accent);font-style:normal;font-weight:600}
+blockquote{margin:1.2rem 0;padding:.9rem 1.2rem;background:var(--accent-soft);
+  border-left:4px solid var(--accent);border-radius:0 6px 6px 0;color:#78350f}
+blockquote p{margin:.3rem 0}
+ul,ol{padding-left:1.4rem} li{margin:.3rem 0}
+code{background:var(--code-bg);padding:.1rem .4rem;border-radius:3px;
+  font-family:"SF Mono","JetBrains Mono",Consolas,monospace;font-size:.88em;color:#92400e}
+pre{background:#1f2328;color:#e6edf3;padding:1rem 1.2rem;border-radius:8px;
+  overflow-x:auto;font-size:.85rem;line-height:1.5}
+pre code{background:none;color:inherit;padding:0}
+table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.9rem}
+th,td{border:1px solid var(--border);padding:.6rem .8rem;text-align:left;vertical-align:top}
+th{background:var(--code-bg);font-weight:600}
+tr:nth-child(even) td{background:#fcfbf7}
+.mermaid{margin:1.5rem 0;text-align:center;background:var(--card);
+  padding:1rem;border-radius:8px;border:1px solid var(--rule);
+  cursor:zoom-in;position:relative;transition:box-shadow .15s}
+.mermaid:hover{box-shadow:0 0 0 2px var(--accent)}
+.mermaid::after{content:"点击放大";position:absolute;top:.4rem;right:.6rem;
+  font-size:.7rem;color:var(--muted);opacity:.7}
+/* lightbox：点击 mermaid 后的全屏遮罩 */
+.lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);
+  z-index:9999;overflow:auto;padding:2rem;cursor:zoom-out}
+.lightbox.open{display:flex;align-items:center;justify-content:center}
+.lightbox .mermaid-holder{background:var(--card);border-radius:8px;padding:1.5rem;
+  display:inline-block;cursor:default}
+.nav{display:flex;justify-content:space-between;margin:3rem 0 0;padding:1.2rem 0 0;
+  border-top:1px solid var(--rule);font-size:.9rem}
+.nav a{color:var(--accent);text-decoration:none}
+.nav a:hover{text-decoration:underline}
+hr{border:none;border-top:1px solid var(--rule);margin:2rem 0}
+a{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="essay">
+<div class="eyebrow">案例集</div>
+<h1>demands_agent 案例集</h1>
+<div class="sub">一个数据需求自动分析与实现 Agent 的深度复盘。</div>
+</header>
+<blockquote>
+<p>一个数据需求自动分析与实现 Agent 的深度复盘。
+用途：个人作品集 / 简历素材来源。不是代码搬运，是从项目中提炼的工程经验与方法论。</p>
+</blockquote>
+<h2>这是什么</h2>
+<p>这是一份关于 demands_agent 项目的分层案例集。demands_agent 是一个<strong>把&quot;数据需求从口述到上线&quot;做成可验证交付流水线的内部 Agent</strong>——它真正解决的问题不是&quot;让 LLM 写 SQL&quot;，而是&quot;怎么让一个会写 SQL 的 AI 不在交付这件事上撒谎&quot;。</p>
+<p>这份案例集不复制代码，而是提炼：项目的设计思想、工程结构、可迁移的方法论、真实事故复盘、版本演进。目标是作为个人网站项目 / 简历的素材来源。</p>
+<h2>快速判断：要不要读</h2>
+<table>
+<thead>
+<tr>
+<th>你是</th>
+<th>建议读</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>招聘者 / 30 秒读者</strong></td>
+<td><a href="00-电梯演讲.html">00-电梯演讲</a>（+ <a href="01-痛点与设计.html">01-痛点与设计</a> 如果有时间）</td>
+</tr>
+<tr>
+<td><strong>想理解这个 Agent 怎么运作</strong></td>
+<td><a href="01-痛点与设计.html">01-痛点与设计</a> → <a href="02-工程系统全景.html">02-工程系统全景</a></td>
+</tr>
+<tr>
+<td><strong>想挖方法论、看能不能迁移到自己项目</strong></td>
+<td><a href="03-可迁移法则.html">03-可迁移法则</a>（最值钱的一篇）</td>
+</tr>
+<tr>
+<td><strong>想看真实事故和复盘</strong></td>
+<td><a href="04-真实复盘.html">04-真实复盘</a></td>
+</tr>
+<tr>
+<td><strong>想看一个项目怎么从 v0.1 长到 v1.0-rc</strong></td>
+<td><a href="05-演进史.html">05-演进史</a></td>
+</tr>
+<tr>
+<td><strong>想要诚实的总结（收获 + 局限）</strong></td>
+<td><a href="06-收获与边界.html">06-收获与边界</a></td>
+</tr>
+<tr>
+<td><strong>想看&quot;什么是 Agent&quot;的深度研究笔记</strong></td>
+<td><a href="07-什么是Agent与研究笔记.html">07-什么是Agent与研究笔记</a></td>
+</tr>
+</tbody></table>
+<h2>阅读顺序</h2>
+<p><strong>线性阅读</strong>（推荐第一次读）：00 → 01 → 02 → 03 → 04 → 05 → 06 → 07</p>
+<p><strong>按用途跳读</strong>：</p>
+<ul>
+<li><strong>简历摘录</strong>：00 的&quot;三个最锋利的判断&quot; + 03 的&quot;10 条法则&quot;标题 + 04 的 PM 统计</li>
+<li><strong>面试准备</strong>：00 + 03 + 04 + 06（电梯演讲 + 方法论 + 事故 + 反思）</li>
+<li><strong>技术深聊</strong>：02 + 07（工程全景 + Agent 设计要素与工业鲁棒性）</li>
+</ul>
+<h2>一句话总结这个项目</h2>
+<blockquote>
+<p><strong>不是让 AI 变得更可信，而是用工程边界让&quot;AI 不可信&quot;这件事变得可验证、可拦截、可恢复。</strong></p>
+</blockquote>
+<h2>目录</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>篇章</th>
+<th>一句话</th>
+<th>篇幅</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>00</td>
+<td><a href="00-电梯演讲.html">00-电梯演讲</a></td>
+<td>30 秒 hook：一句话定义 + 三个最锋利的判断 + 最贵的教训</td>
+<td>短</td>
+</tr>
+<tr>
+<td>01</td>
+<td><a href="01-痛点与设计.html">01-痛点与设计</a></td>
+<td>这事为什么难 + 四道边界怎么压住</td>
+<td>中</td>
+</tr>
+<tr>
+<td>02</td>
+<td><a href="02-工程系统全景.html">02-工程系统全景</a></td>
+<td>五层结构 + 16 个能力 + 产物契约分层</td>
+<td>中</td>
+</tr>
+<tr>
+<td>03</td>
+<td><a href="03-可迁移法则.html">03-可迁移法则</a></td>
+<td>10 条法则卡片（最值钱的产出）</td>
+<td>长</td>
+</tr>
+<tr>
+<td>04</td>
+<td><a href="04-真实复盘.html">04-真实复盘</a></td>
+<td>21 篇 PM 选 5 篇讲透</td>
+<td>长</td>
+</tr>
+<tr>
+<td>05</td>
+<td><a href="05-演进史.html">05-演进史</a></td>
+<td>v0.1 → v1.0-rc 六个里程碑</td>
+<td>中</td>
+</tr>
+<tr>
+<td>06</td>
+<td><a href="06-收获与边界.html">06-收获与边界</a></td>
+<td>三个收获 + 五个局限 + 下一步</td>
+<td>中</td>
+</tr>
+<tr>
+<td>07</td>
+<td><a href="07-什么是Agent与研究笔记.html">07-什么是Agent与研究笔记</a></td>
+<td>Agent 定义 + 设计要素 + 工业鲁棒性（研究型长文）</td>
+<td>长</td>
+</tr>
+</tbody></table>
+<h2>脱敏说明</h2>
+<p>本案例集所有内容已脱敏：</p>
+<ul>
+<li>✅ 保留：项目概念（S0–S4、gate、PEG、FKC 等）、模块名、文件名、版本号、PM 编号、PM 标题（已脱敏）</li>
+<li>❌ 不含：库名 / 表名 / 字段真实值 / SQL 正文 / 凭证 / 业务方名 / 内部 IP / 内部路径 / 任何 PII</li>
+</ul>
+<p>所有标注 <code>[真实产物 · 脱敏]</code> 的代码块，结构是真实的，具体值已替换或为示意。</p>
+<h2>关于 HTML 版本</h2>
+<p>案例集以 Markdown 为唯一源（Obsidian 友好，mermaid 原生渲染）。<code>_sampler/</code> 目录下有一个 HTML 样式参考样例（<code>07-什么是Agent.html</code>），用于评估对外展示时的排版效果，不属于日常维护内容。如需对外展示版本，可基于该 sampler 的样式手工或半自动转换。</p>
+<h2>元信息</h2>
+<ul>
+<li><strong>项目类型</strong>：内部数据需求 Agent（Python + Typer + SSH 查询 + Nebula 血缘 API）</li>
+<li><strong>案例集定位</strong>：个人作品集 / 简历素材来源</li>
+<li><strong>文风</strong>：第一人称、法则化、判断直接；对标 <code>AIx/agents/研究/</code> 的研究型长文风格</li>
+<li><strong>核心价值</strong>：可迁移的工程纪律，不是代码</li>
+</ul>
+
+
+</div>
+</body>
+</html>

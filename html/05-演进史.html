@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>05 · 演进史 — 从 v0.1 到 v1.0-rc 长出了什么</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>document.addEventListener("DOMContentLoaded",()=>{
+  mermaid.initialize({startOnLoad:true,theme:"neutral",securityLevel:"loose"});
+  // lightbox：点击 mermaid 块 → 全屏放大；点遮罩关闭；ESC 关闭
+  // 关键：mermaid 渲染后会把 .mermaid 里的文本替换成 svg，所以点击时
+  // 要在 lightbox 里重建一个 .mermaid div 放原始文本，再调用 mermaid.run() 重新渲染
+  const lb=document.createElement("div");lb.className="lightbox";document.body.appendChild(lb);
+  // 保存每张图的原始 mermaid 代码（渲染前抓取）
+  const sources=new Map();
+  document.querySelectorAll(".mermaid").forEach((m,i)=>{
+    sources.set(i,m.textContent);m.dataset.src=i;
+  });
+  document.querySelectorAll(".mermaid").forEach((m,i)=>{
+    m.addEventListener("click",async()=>{
+      const srcId=m.dataset.src;
+      const code=sources.get(Number(srcId));
+      const holder=document.createElement("div");
+      holder.className="mermaid-holder";
+      lb.innerHTML="";lb.appendChild(holder);lb.classList.add("open");
+      // 用 mermaid.render 拿 svg 字符串（不依赖 .mermaid class，避免 run() 的 class 识别问题）
+      try{
+        const {svg}=await mermaid.render("lb"+Date.now(),code);
+        holder.innerHTML=svg;
+        const s=holder.querySelector("svg");
+        // 从 viewBox 解析原始内容尺寸，强制设为绝对像素（覆盖 mermaid 的 width:100%/max-width 限制）
+        const vb=(s.getAttribute("viewBox")||"").split(" ");
+        const w=parseFloat(vb[2]),h=parseFloat(vb[3]);
+        if(w&&h){s.removeAttribute("style");s.setAttribute("width",w);s.setAttribute("height",h);}
+      }catch(e){console.error("lightbox render failed",e);holder.textContent="渲染失败: "+e.message}
+    });
+  });
+  lb.addEventListener("click",()=>lb.classList.remove("open"));
+  document.addEventListener("keydown",e=>{if(e.key==="Escape")lb.classList.remove("open")});
+})</script>
+<style>
+:root {
+  --bg:#fafaf7; --card:#ffffff; --ink:#1f2328; --muted:#57606a;
+  --accent:#b45309; --accent-soft:#fef3c7; --rule:#e5e3dd;
+  --code-bg:#f6f3ee; --border:#d6d3c7;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:2.5rem 1rem 4rem;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,"PingFang SC","Noto Sans CJK SC","Helvetica Neue",sans-serif;
+  line-height:1.75;font-size:16px}
+.wrap{max-width:820px;margin:0 auto}
+header.essay{text-align:center;margin-bottom:2.5rem;padding-bottom:1.5rem;border-bottom:1px solid var(--rule)}
+header.essay .eyebrow{font-size:.8rem;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);font-weight:600}
+header.essay h1{font-size:2rem;margin:.5rem 0;letter-spacing:-.01em}
+header.essay .sub{color:var(--muted);font-size:.95rem}
+h1{font-size:1.8rem;margin:2rem 0 .8rem;padding-bottom:.4rem;border-bottom:2px solid var(--accent);display:inline-block}
+h2{font-size:1.4rem;margin:2.5rem 0 .8rem;padding-bottom:.4rem;border-bottom:1px solid var(--rule)}
+h3{font-size:1.15rem;margin:1.8rem 0 .5rem}
+h4{font-size:1rem;margin:1.2rem 0 .4rem;color:var(--accent)}
+p{margin:.6rem 0}
+strong{color:var(--ink)} em{color:var(--accent);font-style:normal;font-weight:600}
+blockquote{margin:1.2rem 0;padding:.9rem 1.2rem;background:var(--accent-soft);
+  border-left:4px solid var(--accent);border-radius:0 6px 6px 0;color:#78350f}
+blockquote p{margin:.3rem 0}
+ul,ol{padding-left:1.4rem} li{margin:.3rem 0}
+code{background:var(--code-bg);padding:.1rem .4rem;border-radius:3px;
+  font-family:"SF Mono","JetBrains Mono",Consolas,monospace;font-size:.88em;color:#92400e}
+pre{background:#1f2328;color:#e6edf3;padding:1rem 1.2rem;border-radius:8px;
+  overflow-x:auto;font-size:.85rem;line-height:1.5}
+pre code{background:none;color:inherit;padding:0}
+table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.9rem}
+th,td{border:1px solid var(--border);padding:.6rem .8rem;text-align:left;vertical-align:top}
+th{background:var(--code-bg);font-weight:600}
+tr:nth-child(even) td{background:#fcfbf7}
+.mermaid{margin:1.5rem 0;text-align:center;background:var(--card);
+  padding:1rem;border-radius:8px;border:1px solid var(--rule);
+  cursor:zoom-in;position:relative;transition:box-shadow .15s}
+.mermaid:hover{box-shadow:0 0 0 2px var(--accent)}
+.mermaid::after{content:"点击放大";position:absolute;top:.4rem;right:.6rem;
+  font-size:.7rem;color:var(--muted);opacity:.7}
+/* lightbox：点击 mermaid 后的全屏遮罩 */
+.lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);
+  z-index:9999;overflow:auto;padding:2rem;cursor:zoom-out}
+.lightbox.open{display:flex;align-items:center;justify-content:center}
+.lightbox .mermaid-holder{background:var(--card);border-radius:8px;padding:1.5rem;
+  display:inline-block;cursor:default}
+.nav{display:flex;justify-content:space-between;margin:3rem 0 0;padding:1.2rem 0 0;
+  border-top:1px solid var(--rule);font-size:.9rem}
+.nav a{color:var(--accent);text-decoration:none}
+.nav a:hover{text-decoration:underline}
+hr{border:none;border-top:1px solid var(--rule);margin:2rem 0}
+a{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="essay">
+<div class="eyebrow">第 05 篇</div>
+<h1>05 · 演进史 — 从 v0.1 到 v1.0-rc 长出了什么</h1>
+<div class="sub">为什么读这篇：一个项目怎么从"能跑的脚本"长成"有治理纪律的 Agent 系统"，版本演进是最硬的证据。</div>
+</header>
+<blockquote>
+<p>为什么读这篇：一个项目怎么从&quot;能跑的脚本&quot;长成&quot;有治理纪律的 Agent 系统&quot;，版本演进是最硬的证据。
+读完带走：六个版本里程碑 + 每个里程碑&quot;长出了什么能力 + 被什么逼出来的&quot;。</p>
+</blockquote>
+<h2>版本主轴：一条曲线，不是一堆散点</h2>
+<p>demands_agent 从 v0.1 到 v1.0-rc，有三十多个 release。但真正定义这条演进曲线的是<strong>六个里程碑版本</strong>——每个里程碑都对应一个&quot;治理主题&quot;，且每个主题都是被真实事故逼出来的。</p>
+<div class="mermaid">timeline
+    title demands_agent 版本主轴
+    section 奠基期
+        v0.1-0.3 : SOP 流水线 + 门禁雏形
+                 : 7 个核心 Skills
+                 : 被早期"绕过 SOP"事故逼出
+    section 硬化期
+        v0.3-0.6 : Evidence v0.6 权威证据
+                 : Typed routing
+                 : Prerelease Go/No-Go
+                 : 被"形式合规撒谎"逼出
+    section 记忆期
+        v0.7     : 长期记忆闭环
+                 : 5 类 ingestion + governance
+                 : 被 PM-020 知识结晶失败逼出
+    section 运行态期
+        v0.9     : Agent runtime release train
+                 : PEG + DB 隔离 + 审批副作用
+                 : 被"raw data 上云"风险逼出
+    section 治理成熟期
+        v0.10    : 生产级 FKC 记忆
+                 : Fact/Knowledge/Cognition 分层
+                 : Expert constraint envelope
+    section 收敛期
+        v1.0-rc  : Release Candidate
+                 : Demand lifecycle outcome
+                 : Lifecycle Dashboard + i18n</div>
+
+<p>读这条 timeline 的关键：<strong>每个版本的主题不是&quot;加了什么功能&quot;，而是&quot;补上了什么治理缺口&quot;。</strong> 这条曲线的方向始终一致——从&quot;能力面&quot;向&quot;治理面&quot;和&quot;运行态面&quot;移动。</p>
+<h2>六个里程碑详解</h2>
+<h3>v0.1–v0.3：奠基期 — SOP 流水线 + 门禁雏形</h3>
+<p><strong>长出了什么</strong>：</p>
+<ul>
+<li>S0–S4 SOP 流水线（术语映射 → 采集 → grounding → 口径 → 上线素材）。</li>
+<li>7 个核心 Skills（business-glossary / demand-intake / domain-explorer / trace-field-demand / deploy-prep / postmortem-precheck / create-postmortem）。</li>
+<li>自动化门禁：每阶段硬门禁 + 软检查。</li>
+<li>v0.2.3 起 typed routing（standard / complex / diagnostic）。</li>
+<li>v0.3.0 prerelease hardening + Go/No-Go closeout。</li>
+</ul>
+<p><strong>被什么逼出来</strong>：PM-001~005 这批最早的事故——技能路径不一致、绕过 SOP、未做字段核验、Hook 未闭环。这个阶段的核心教训是&quot;光有 SOP 文本不够，必须有机器执行的门禁&quot;。</p>
+<h3>v0.3–v0.6：硬化期 — Evidence v0.6 + Typed Routing</h3>
+<p><strong>长出了什么</strong>：</p>
+<ul>
+<li>Evidence v0.6 权威证据体系：content hash、authority level、raw result policy、cloud context flag、stale/forged/dangling 检测、citation comments。</li>
+<li>Typed routing 把 S0/S1 之后的路径分成三种需求类型，每种有不同的 required/skipped stages。</li>
+<li>Prerelease evidence-basis synthesis + 显式 Go/No-Go closeout。</li>
+<li>v0.6 的 scoping 和 implementation spec 把 evidence authenticity 写成硬约束。</li>
+</ul>
+<p><strong>被什么逼出来</strong>：PM-003（未做字段核验直接猜测）、PM-007（lineage 误用）、PM-009（SR 发布范围未做对象存在性核查）。这个阶段的核心教训是&quot;门禁必须消费结构化 evidence，不能消费叙述&quot;——<code>analysis.md</code> 里写&quot;看起来像验证过&quot;已经不足以通过 S3/S4 门禁。</p>
+<h3>v0.7：记忆期 — 长期记忆闭环</h3>
+<p><strong>长出了什么</strong>：</p>
+<ul>
+<li>Memory schema / store：JSONL authority + SQLite runtime index。</li>
+<li>5 类 ingestion：postmortem、alignment、demand、scrutiny、realtime metadata。</li>
+<li>Retrieval 按 trigger 召回 approved memory，并记录 recall event。</li>
+<li>Citation：analysis / alignment 中的 memory 引用可被 gate 校验（<code>S6-MEMORY-CITATION</code>）。</li>
+<li>Governance：low-utility、stale、contradiction 只作为信号层，不自动裁决事实。</li>
+<li>CC PreToolUse 保护：阻止手写 memory、篡改 index、伪造 citation。</li>
+<li>Fault injection：9 个 memory 滥用场景全量 fail-closed。</li>
+</ul>
+<p><strong>被什么逼出来</strong>：PM-020（dwh-quality 知识结晶失败）。这次事故的直接产物是 <a href="03-可迁移法则.html">03-可迁移法则</a> 法则 9（资料 ≠ 知识点）和 effective knowledge point 的五个必要条件。v0.7 把&quot;经验复用&quot;从文档阅读推进到可召回、可引用、可证伪、可门禁的长期记忆层。</p>
+<h3>v0.9：运行态期 — Agent Runtime Release Train</h3>
+<p><strong>长出了什么</strong>（v0.9.1–v0.9.5 一条完整的 release train）：</p>
+<div class="mermaid">flowchart LR
+    A[Private Execution<br/>Gateway] --> B[DB 隔离]
+    B --> C[Workflow<br/>runtime binding]
+    C --> D[MCP adapter]
+    D --> E[Approval-gated<br/>side effects]
+    E --> F[Run observability<br/>+ guarded resume]
+
+    style A fill:#dbeafe,stroke:#2563eb
+    style F fill:#dcfce7,stroke:#16a34a</div>
+
+<p>具体能力：</p>
+<ul>
+<li><strong>DB 隔离形式化</strong>：workflow/cloud context 默认 evidence-only output；raw rows、credentials、敏感样本不进 cloud-facing stdout/reports。</li>
+<li><strong>Workflow runtime binding</strong>：S0–S4 数据访问可绑定 v0.9 run。</li>
+<li><strong>Run state model</strong>：<code>running</code> / <code>blocked-awaiting-external-input</code> / <code>completed</code> / <code>failed</code>，见 <a href="07-什么是Agent与研究笔记.html">07-什么是Agent与研究笔记</a> 机制 1。</li>
+<li><strong>Guarded resume</strong>：checkpoint hash + timeline tail 校验。</li>
+<li><strong>Approval-gated side effects</strong>：plan → preview → approval → execute → post-check → rollback。</li>
+</ul>
+<p><strong>被什么逼出来</strong>：raw data / credential 溜进云端模型的风险，以及长任务中断后无法恢复的工程痛点。这个阶段的核心是&quot;让 Agent 的执行变得可控制、可审计、可恢复&quot;。</p>
+<h3>v0.10：治理成熟期 — 生产级 FKC 记忆</h3>
+<p><strong>长出了什么</strong>：</p>
+<ul>
+<li>生产级 Fact / Knowledge / Cognition 记忆层。</li>
+<li>Expert constraint envelope（结构化 ConstraintPolicy，不是 prompt persona）。</li>
+<li>Facts 保持 source-backed、append-only、hash-checked。</li>
+<li>Knowledge 必须从当前 approved facts 派生。</li>
+<li>Cognition 可以指导路由，但不能证明事实声明。</li>
+<li>FKC memory schemas、store、SQLite index、source inventory、consolidation checks、citation gates 全套。</li>
+</ul>
+<p><strong>意义</strong>：这个版本把项目从&quot;ad-hoc memory notes&quot;推进到&quot;可审计、分层的组织知识&quot;。FKC 的硬分层（Fact 证明 / Knowledge 指导 / Cognition 路由）是 <a href="07-什么是Agent与研究笔记.html">07-什么是Agent与研究笔记</a> 五属性里 Governed learning 的工程落地。</p>
+<h3>v1.0-rc：收敛期 — Release Candidate</h3>
+<p><strong>长出了什么</strong>：</p>
+<ul>
+<li>Governance repair（issue-108，authority/write-side discipline fixes）。</li>
+<li>Demand lifecycle outcome kernel：<code>current_outcome.json</code> authority、freshness regeneration、run/closure records。</li>
+<li>Lifecycle Dashboard：单需求 Lifecycle Console、portfolio index、legacy workbench、zh/en i18n。</li>
+<li>Private execution hardening：agent DB 查询需要 credential broker；内部 metadata tools 被 audit。</li>
+<li>Distribution：root <code>SKILL.md</code> 一行 agent install flow、distribution-readiness 文档。</li>
+</ul>
+<p><strong>诚实的边界</strong>：v1.0-rc.1 的 release notes 第一句就写明——&quot;It is <strong>not GA</strong> and does <strong>not</strong> mean production deployment is complete.&quot; 这种在 release notes 里主动声明&quot;我没完成&quot;的诚实，本身就是一种成熟度信号。</p>
+<h2>版本对照表</h2>
+<p><code>[真实产物 · 版本号真实，细节脱敏]</code></p>
+<table>
+<thead>
+<tr>
+<th>版本</th>
+<th>主题</th>
+<th>核心产出</th>
+<th>逼出来的事故</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>v0.1–0.3</td>
+<td>SOP + 门禁雏形</td>
+<td>S0–S4、7 Skills、typed routing、Go/No-Go</td>
+<td>PM-001~005（绕过 SOP）</td>
+</tr>
+<tr>
+<td>v0.3–0.6</td>
+<td>Evidence 权威化</td>
+<td>Evidence v0.6、hash/policy/citation、prerelease synthesis</td>
+<td>PM-003/007/009（形式合规撒谎）</td>
+</tr>
+<tr>
+<td>v0.7</td>
+<td>长期记忆闭环</td>
+<td>Memory schema、5 类 ingestion、citation gate、fault injection</td>
+<td>PM-020（知识结晶失败）</td>
+</tr>
+<tr>
+<td>v0.9</td>
+<td>Agent runtime</td>
+<td>PEG、DB 隔离、run state model、guarded resume、approval-gated side effects</td>
+<td>raw data 上云风险 + 长任务不可恢复</td>
+</tr>
+<tr>
+<td>v0.10</td>
+<td>生产级 FKC</td>
+<td>Fact/Knowledge/Cognition 分层、expert constraint envelope</td>
+<td>记忆污染决策风险</td>
+</tr>
+<tr>
+<td>v1.0-rc</td>
+<td>收敛 + lifecycle</td>
+<td>outcome kernel、Lifecycle Dashboard、i18n、distribution</td>
+<td>governance audit 发现的 write-side 纪律缺口</td>
+</tr>
+</tbody></table>
+<h2>这条演进曲线的元规律</h2>
+<p>如果要从这条曲线里提炼一条元规律，我会说：</p>
+<blockquote>
+<p><strong>每个版本都在回答同一个问题的不同切面——&quot;怎么让一个会写 SQL 的 AI 在工业现场可信&quot;。v0.1 回答&quot;怎么让它走流程&quot;，v0.6 回答&quot;怎么让它不带谎&quot;，v0.7 回答&quot;怎么让它记得住教训&quot;，v0.9 回答&quot;怎么让它的执行可恢复&quot;，v0.10 回答&quot;怎么让它的记忆不污染决策&quot;，v1.0-rc 回答&quot;怎么把这些收敛成产品&quot;。</strong></p>
+</blockquote>
+<p>这条曲线没有&quot;加功能&quot;的版本——每个版本都是在补一个被事故暴露的治理缺口。这是我认为这个项目最值得拿出来说的一点：<strong>它不是功能堆砌，是问题驱动</strong>。</p>
+<hr>
+<p>上一篇：<a href="04-真实复盘.html">04-真实复盘</a> ｜ 下一篇：<a href="06-收获与边界.html">06-收获与边界</a></p>
+
+<div class="nav"><a href="04-真实复盘.html">← 上一篇：04-真实复盘</a><a href="06-收获与边界.html">下一篇：06-收获与边界 →</a></div>
+</div>
+</body>
+</html>

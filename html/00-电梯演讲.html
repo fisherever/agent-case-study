@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>00 · 电梯演讲</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>document.addEventListener("DOMContentLoaded",()=>{
+  mermaid.initialize({startOnLoad:true,theme:"neutral",securityLevel:"loose"});
+  // lightbox：点击 mermaid 块 → 全屏放大；点遮罩关闭；ESC 关闭
+  // 关键：mermaid 渲染后会把 .mermaid 里的文本替换成 svg，所以点击时
+  // 要在 lightbox 里重建一个 .mermaid div 放原始文本，再调用 mermaid.run() 重新渲染
+  const lb=document.createElement("div");lb.className="lightbox";document.body.appendChild(lb);
+  // 保存每张图的原始 mermaid 代码（渲染前抓取）
+  const sources=new Map();
+  document.querySelectorAll(".mermaid").forEach((m,i)=>{
+    sources.set(i,m.textContent);m.dataset.src=i;
+  });
+  document.querySelectorAll(".mermaid").forEach((m,i)=>{
+    m.addEventListener("click",async()=>{
+      const srcId=m.dataset.src;
+      const code=sources.get(Number(srcId));
+      const holder=document.createElement("div");
+      holder.className="mermaid-holder";
+      lb.innerHTML="";lb.appendChild(holder);lb.classList.add("open");
+      // 用 mermaid.render 拿 svg 字符串（不依赖 .mermaid class，避免 run() 的 class 识别问题）
+      try{
+        const {svg}=await mermaid.render("lb"+Date.now(),code);
+        holder.innerHTML=svg;
+        const s=holder.querySelector("svg");
+        // 从 viewBox 解析原始内容尺寸，强制设为绝对像素（覆盖 mermaid 的 width:100%/max-width 限制）
+        const vb=(s.getAttribute("viewBox")||"").split(" ");
+        const w=parseFloat(vb[2]),h=parseFloat(vb[3]);
+        if(w&&h){s.removeAttribute("style");s.setAttribute("width",w);s.setAttribute("height",h);}
+      }catch(e){console.error("lightbox render failed",e);holder.textContent="渲染失败: "+e.message}
+    });
+  });
+  lb.addEventListener("click",()=>lb.classList.remove("open"));
+  document.addEventListener("keydown",e=>{if(e.key==="Escape")lb.classList.remove("open")});
+})</script>
+<style>
+:root {
+  --bg:#fafaf7; --card:#ffffff; --ink:#1f2328; --muted:#57606a;
+  --accent:#b45309; --accent-soft:#fef3c7; --rule:#e5e3dd;
+  --code-bg:#f6f3ee; --border:#d6d3c7;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:2.5rem 1rem 4rem;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,"PingFang SC","Noto Sans CJK SC","Helvetica Neue",sans-serif;
+  line-height:1.75;font-size:16px}
+.wrap{max-width:820px;margin:0 auto}
+header.essay{text-align:center;margin-bottom:2.5rem;padding-bottom:1.5rem;border-bottom:1px solid var(--rule)}
+header.essay .eyebrow{font-size:.8rem;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);font-weight:600}
+header.essay h1{font-size:2rem;margin:.5rem 0;letter-spacing:-.01em}
+header.essay .sub{color:var(--muted);font-size:.95rem}
+h1{font-size:1.8rem;margin:2rem 0 .8rem;padding-bottom:.4rem;border-bottom:2px solid var(--accent);display:inline-block}
+h2{font-size:1.4rem;margin:2.5rem 0 .8rem;padding-bottom:.4rem;border-bottom:1px solid var(--rule)}
+h3{font-size:1.15rem;margin:1.8rem 0 .5rem}
+h4{font-size:1rem;margin:1.2rem 0 .4rem;color:var(--accent)}
+p{margin:.6rem 0}
+strong{color:var(--ink)} em{color:var(--accent);font-style:normal;font-weight:600}
+blockquote{margin:1.2rem 0;padding:.9rem 1.2rem;background:var(--accent-soft);
+  border-left:4px solid var(--accent);border-radius:0 6px 6px 0;color:#78350f}
+blockquote p{margin:.3rem 0}
+ul,ol{padding-left:1.4rem} li{margin:.3rem 0}
+code{background:var(--code-bg);padding:.1rem .4rem;border-radius:3px;
+  font-family:"SF Mono","JetBrains Mono",Consolas,monospace;font-size:.88em;color:#92400e}
+pre{background:#1f2328;color:#e6edf3;padding:1rem 1.2rem;border-radius:8px;
+  overflow-x:auto;font-size:.85rem;line-height:1.5}
+pre code{background:none;color:inherit;padding:0}
+table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.9rem}
+th,td{border:1px solid var(--border);padding:.6rem .8rem;text-align:left;vertical-align:top}
+th{background:var(--code-bg);font-weight:600}
+tr:nth-child(even) td{background:#fcfbf7}
+.mermaid{margin:1.5rem 0;text-align:center;background:var(--card);
+  padding:1rem;border-radius:8px;border:1px solid var(--rule);
+  cursor:zoom-in;position:relative;transition:box-shadow .15s}
+.mermaid:hover{box-shadow:0 0 0 2px var(--accent)}
+.mermaid::after{content:"点击放大";position:absolute;top:.4rem;right:.6rem;
+  font-size:.7rem;color:var(--muted);opacity:.7}
+/* lightbox：点击 mermaid 后的全屏遮罩 */
+.lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);
+  z-index:9999;overflow:auto;padding:2rem;cursor:zoom-out}
+.lightbox.open{display:flex;align-items:center;justify-content:center}
+.lightbox .mermaid-holder{background:var(--card);border-radius:8px;padding:1.5rem;
+  display:inline-block;cursor:default}
+.nav{display:flex;justify-content:space-between;margin:3rem 0 0;padding:1.2rem 0 0;
+  border-top:1px solid var(--rule);font-size:.9rem}
+.nav a{color:var(--accent);text-decoration:none}
+.nav a:hover{text-decoration:underline}
+hr{border:none;border-top:1px solid var(--rule);margin:2rem 0}
+a{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="essay">
+<div class="eyebrow">第 00 篇</div>
+<h1>00 · 电梯演讲</h1>
+<div class="sub">为什么读这篇：30 秒判断 demands_agent 值不值得继续往下看。</div>
+</header>
+<blockquote>
+<p>为什么读这篇：30 秒判断 demands_agent 值不值得继续往下看。
+读完带走：一句话定义 + 三个最锋利的判断 + 一个最贵的教训。</p>
+</blockquote>
+<h2>一句话</h2>
+<p><strong>demands_agent 是一个把&quot;数据需求从口述到上线&quot;做成可验证交付流水线的内部 Agent——它真正解决的问题不是&quot;让 LLM 写 SQL&quot;，而是&quot;怎么让一个会写 SQL 的 AI 不在交付这件事上撒谎&quot;。</strong></p>
+<h2>三个最锋利的判断</h2>
+<p>这三个判断是我在这个项目里反复被打脸之后才信的，现在它们是我做任何 Agent 项目的默认假设。</p>
+<p><strong>判断一：价值住在&quot;验证&quot;里，不住在&quot;生成&quot;里。</strong>
+生成能力会被下一代模型碾压，验证能力随模型变强而增值。判别工具是一个过滤器：假设 worker 无限聪明且诚实，这段代码还需要吗？需要的进 kernel/contract（升值），不需要的进 scaffolding（标注退役条件）。</p>
+<p>诚实地说，这是一个<strong>还没做透的理想</strong>。项目里目前只有 memory 层有系统化的退役标注（<code>review_status: deprecated/refuted/stale</code>，见 <code>src/demands_agent/memory/schema.py</code>），但模块/契约/gate 层面的 kernel vs scaffolding 分类<strong>并没有落地成可见的标注体系</strong>——我自己也无法一眼看出哪些代码是&quot;随模型变强而升值&quot;的 kernel、哪些是&quot;模型够强就该退役&quot;的 scaffolding。我把这条列为判断一，不是因为做到了，而是因为它应该成为下一个版本的资产分类纪律。</p>
+<p><strong>判断二：区分&quot;客观事实&quot;和&quot;制度性事实&quot;，是整个 Agent 治理的地基。</strong>
+机器可以去查&quot;表里有没有 <code>create_day</code> 字段&quot;（客观事实），但永远没有资格宣告&quot;这个需求的生效范围是 6 月 1 日起&quot;（制度性事实——那是业务方签字才能创造的事实）。模型能力越强，越危险：一个更强的模型不会停止越权裁决，只会把越权写得更流利、更自信。所以哪些环节必须人工签字，取决于该环节产出的是哪种事实，而不是模型够不够聪明。</p>
+<p><strong>判断三：&quot;门禁过了&quot;不等于&quot;交付对了&quot;。</strong>
+这个项目交付前的门禁（<code>hooks finalize</code>）有二十多道检查，但它只是&quot;必要、远远不充分&quot;的校验层。它检查文件存在、SQL 命中静态红线、release SQL 数量大于零——可它拦不住&quot;结构不规范、范围不完整&quot;的 release 被误判为可交付。这条教训的代价是一次真实的 release 漏项事故，见 <a href="04-真实复盘.html">04-真实复盘</a> 里的 PM-018。</p>
+<h2>一个最贵的教训</h2>
+<blockquote>
+<p>完整版见 <a href="03-可迁移法则.html">03-可迁移法则</a> 法则 7：只看 RAW 工件，不看执行者叙述。</p>
+</blockquote>
+<p>最初我让 Agent 写完一段分析就报告&quot;已验证&quot;。后来发现它在叙述里写&quot;看起来像验证过&quot;，但实际根本没跑查询。这不是它不诚实——是叙述本来就是它的输出，工件才是证据。从此以后，我的 review packet 固定开头永远是一句：<strong>&quot;请以 RAW gate 为准，不要根据 agent 叙述判断。&quot;</strong></p>
+<p>这条延伸出一个我自己很珍惜的观察：<strong>我组织这个项目的方式，本身就是这个产品的同构物。</strong> builder / executor / monitor / 外部 reviewer 的角色分离、拿证据包来评审、把裁定写回 contract——我在用治理 Agent 的方法治理&quot;开发 Agent 的过程&quot;。这个元技能比任何单条代码都值钱。</p>
+<h2>这个项目能证明什么</h2>
+<p>如果要把这份案例放到简历上，我会这样提炼它的可信度：</p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>证据</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>不是玩具</strong></td>
+<td>一个真实的、跨引擎（StarRocks / Hive / Presto / MySQL / 实时）的数据交付流水线，从需求采集到 release package 全链路有产物</td>
+</tr>
+<tr>
+<td><strong>有治理纪律</strong></td>
+<td>S0–S4 五阶段门禁 + 交付前 finalize 汇总门禁；21 篇 postmortem（PM-001~021）把每次事故沉淀成结构化根因</td>
+</tr>
+<tr>
+<td><strong>可恢复、可审计</strong></td>
+<td>每个需求绑定 run id、timeline、checkpoint、approval、side-effect records；中断后能从 checkpoint resume</td>
+</tr>
+<tr>
+<td><strong>知道边界在哪</strong></td>
+<td>raw data / credential / 敏感 rowset 永不进入云端模型 context；Private Execution Gateway 在 cloud payload 上 fail-closed</td>
+</tr>
+<tr>
+<td><strong>持续演进</strong></td>
+<td>从 v0.1 到 v1.0-rc，十几个 minor 版本，每个版本都有明确的治理主题，见 <a href="05-演进史.html">05-演进史</a></td>
+</tr>
+</tbody></table>
+<p><code>[真实产物 · 结构脱敏]</code> 一个需求工作区的典型产物骨架：</p>
+<pre><code class="language-text">output/demands/&lt;demand_id&gt;/
+├── review/                  # 需求采集与评审（工单快照、effective requirements、质量报告、known fact resolution）
+├── alignment.md             # 业务方签字的 alignment（制度性事实的唯一合法来源）
+├── reference/               # S2/S3 工程产物（对象准入矩阵、scope convergence、evidence plan、probe evidence）
+├── analysis.md              # 方案设计（口径、架构路径、实现拆解）
+├── release_scope.yaml       # release obligation 契约（由签字 alignment 派生，不可手写）
+├── release_manifest.yaml    # 由 CLI 机械派生，禁止直接编辑
+├── release/                 # 分层 release 包
+│   ├── 01_ddl/
+│   ├── 02_etl/
+│   ├── 04_validation/
+│   └── 05_ops/
+├── runs/&lt;run_id&gt;/           # runtime 真相（run.yaml、timeline.jsonl、checkpoint.json、policy_decisions.jsonl）
+└── hooks/status.json        # 各阶段 gate 状态（PASS / WARN / BLOCKED）
+</code></pre>
+<p>这套结构不是设计出来的，是被 21 篇 postmortem 一篇一篇逼出来的。</p>
+<h2>阅读建议</h2>
+<ul>
+<li><strong>招聘者 / 30 秒读者</strong>：看完本篇即可。如果时间多一点，加 <a href="01-痛点与设计.html">01-痛点与设计</a>。</li>
+<li><strong>想理解这个 Agent 怎么运作的</strong>：<a href="01-痛点与设计.html">01-痛点与设计</a> → <a href="02-工程系统全景.html">02-工程系统全景</a>。</li>
+<li><strong>想挖方法论、看能不能迁移到自己项目的</strong>：直接去 <a href="03-可迁移法则.html">03-可迁移法则</a>，那是这个项目最值钱的产出。</li>
+<li><strong>想看真实事故和复盘的</strong>：<a href="04-真实复盘.html">04-真实复盘</a>。</li>
+<li><strong>想看一个项目怎么从 v0.1 长到 v1.0-rc 的</strong>：<a href="05-演进史.html">05-演进史</a>。</li>
+</ul>
+<hr>
+<p>下一篇：<a href="01-痛点与设计.html">01-痛点与设计</a></p>
+
+<div class="nav"><span></span><a href="01-痛点与设计.html">下一篇：01-痛点与设计 →</a></div>
+</div>
+</body>
+</html>
